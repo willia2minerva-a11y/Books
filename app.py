@@ -5,6 +5,7 @@ from fpdf import FPDF
 import os
 import random
 import time
+import traceback
 
 # --- إعدادات الواجهة ---
 st.set_page_config(page_title="KDP Empire Builder", page_icon="💰", layout="centered")
@@ -15,9 +16,10 @@ valid_keys = [k.strip() for k in api_keys if k and k.strip() != ""]
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# --- محرك الذكاء الاصطناعي المدرع ---
+# --- محرك الذكاء الاصطناعي المدرع (محدث لـ 2.5-flash) ---
 def ask_gemini(prompt_text):
-    models = ['gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    # التسلسل الصحيح والمدعوم حالياً
+    models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
     last_err = ""
     for key in valid_keys:
         genai.configure(api_key=key)
@@ -27,19 +29,18 @@ def ask_gemini(prompt_text):
                 res = m.generate_content(prompt_text)
                 if res.text: return res.text
             except Exception as e:
-                last_err = str(e)
+                last_err = f"[{model}]: {str(e)}"
                 continue
-    raise Exception(f"فشلت المحاولات. آخر خطأ: {last_err}")
+    raise Exception(f"فشلت المحاولات مع كل النماذج. آخر خطأ: {last_err}")
 
-# --- خوارزميات الأنشطة المربحة (Logic Based) ---
-
+# --- خوارزميات الأنشطة المربحة ---
 def draw_math_page(pdf, page_num):
     pdf.add_page()
     pdf.set_font("Arial", "B", 20)
     pdf.cell(0, 1, f"Math Practice - Page {page_num}", align="C", ln=True)
     pdf.set_font("Arial", "", 18)
     pdf.ln(0.5)
-    for i in range(8): # 8 عمليات في الصفحة
+    for i in range(8):
         num1 = random.randint(10, 99)
         num2 = random.randint(1, 10)
         op = random.choice(['+', '-', 'x'])
@@ -51,11 +52,10 @@ def draw_comic_panels(pdf, page_num):
     pdf.cell(0, 0.5, f"Create Your Comic - Page {page_num}", align="C", ln=True)
     pdf.set_line_width(0.03)
     layouts = [
-        [(0.75, 1.5, 3.5, 4), (4.25, 1.5, 3.5, 4), (0.75, 5.75, 7, 4)], # Layout 1
-        [(0.75, 1.5, 7, 3), (0.75, 4.75, 7, 3), (0.75, 8, 7, 2.5)]      # Layout 2
+        [(0.75, 1.5, 3.5, 4), (4.25, 1.5, 3.5, 4), (0.75, 5.75, 7, 4)],
+        [(0.75, 1.5, 7, 3), (0.75, 4.75, 7, 3), (0.75, 8, 7, 2.5)]
     ]
-    selected = random.choice(layouts)
-    for x, y, w, h in selected:
+    for x, y, w, h in random.choice(layouts):
         pdf.rect(x, y, w, h)
 
 def generate_sudoku():
@@ -78,8 +78,7 @@ def draw_sudoku_page(pdf, board, num):
             pdf.rect(start_x+c*cs, start_y+r*cs, cs, cs)
             if board[r][c] != 0: pdf.text(start_x+c*cs+0.25, start_y+r*cs+0.45, str(board[r][c]))
 
-# --- محرك النشر الآلي (Metadata + PDF) ---
-
+# --- محرك النشر الآلي ---
 def create_full_package(theme, book_type, pages, status):
     pdf = FPDF(unit="in", format=(8.5, 11))
     pdf.set_auto_page_break(0)
@@ -92,66 +91,99 @@ def create_full_package(theme, book_type, pages, status):
         pdf.add_page(); pdf.image("c.jpg", x=0, y=0, w=8.5, h=11); os.remove("c.jpg")
     except: pass
 
-    # 2. العنوان والأنشطة
+    # 2. العنوان
     pdf.add_page(); pdf.set_font("Arial", "B", 30); pdf.set_y(4)
     pdf.cell(0, 1, f"The Big Book of {theme}", align="C", ln=True)
 
-    # توزيع المحتوى بالتساوي
-    per_type = pages // 4
+    # تحديد أعداد الصفحات لكل نوع بناءً على اختيار المستخدم
+    c_count = m_count = com_count = s_count = 0
     
-    # - التلوين
-    status.text("🧠 توليد أوامر التلوين...")
-    p_raw = ask_gemini(f"List {per_type} coloring prompts for {theme}. Bold lines, white bg. One per line.")
-    for i, p in enumerate(p_raw.split('\n')[:per_type]):
-        try:
-            img_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={i}"
-            with open("t.jpg", "wb") as f: f.write(requests.get(img_url, timeout=20).content)
-            pdf.add_page(); pdf.image("t.jpg", x=0.75, y=1.5, w=7, h=7); pdf.add_page(); os.remove("t.jpg")
-        except: continue
+    if book_type == "منوع (كل الأنشطة)":
+        c_count = m_count = com_count = s_count = max(1, pages // 4)
+    elif book_type == "تلوين فقط": c_count = pages
+    elif book_type == "رياضيات فقط": m_count = pages
+    elif book_type == "كوميكس فقط": com_count = pages
+    elif book_type == "سودوكو فقط": s_count = pages
 
-    # - الرياضيات
-    status.text("🔢 توليد صفحات الرياضيات...")
-    for i in range(per_type): draw_math_page(pdf, i+1)
+    # 3. توليد المحتوى
+    if c_count > 0:
+        status.text(f"🧠 توليد {c_count} أوامر تلوين لـ {theme}...")
+        p_raw = ask_gemini(f"List {c_count} simple coloring prompts for {theme}. Bold outlines, white bg. One per line.")
+        for i, p in enumerate(p_raw.split('\n')[:c_count]):
+            status.text(f"🖌️ رسم صفحة التلوين {i+1} من {c_count}...")
+            try:
+                img_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={random.randint(1,999)}"
+                with open("t.jpg", "wb") as f: f.write(requests.get(img_url, timeout=20).content)
+                pdf.add_page(); pdf.image("t.jpg", x=0.75, y=1.5, w=7, h=7); pdf.add_page(); os.remove("t.jpg")
+                time.sleep(1) # استراحة قصيرة لتجنب حظر السيرفر
+            except: continue
 
-    # - الكوميكس
-    status.text("📝 رسم قوالب الكوميكس...")
-    for i in range(per_type): draw_comic_panels(pdf, i+1)
+    if m_count > 0:
+        status.text(f"🔢 توليد {m_count} صفحات رياضيات...")
+        for i in range(m_count): draw_math_page(pdf, i+1)
 
-    # - السودوكو
-    status.text("🧩 توليد السودوكو...")
-    for i in range(per_type): draw_sudoku_page(pdf, generate_sudoku(), i+1)
+    if com_count > 0:
+        status.text(f"📝 رسم {com_count} صفحات كوميكس...")
+        for i in range(com_count): draw_comic_panels(pdf, i+1)
 
-    fname = f"KDP_PRO_{int(time.time())}.pdf"
+    if s_count > 0:
+        status.text(f"🧩 توليد {s_count} ألغاز سودوكو...")
+        for i in range(s_count): draw_sudoku_page(pdf, generate_sudoku(), i+1)
+
+    fname = f"KDP_{theme.replace(' ', '_')}_{int(time.time())}.pdf"
     pdf.output(fname)
     
-    # 3. SEO Metadata
-    status.text("📝 توليد بيانات النشر (SEO)...")
-    meta = ask_gemini(f"Create KDP Metadata for {theme} activity book. Include Title, Subtitle, 7 Keywords, and Description.")
+    # 4. SEO Metadata
+    status.text("📝 كتابة بيانات النشر (SEO)...")
+    meta_prompt = f"Write Amazon KDP listing for kids book. Theme: {theme}. Type: {book_type}. Pages: {pages}. Include: Title, Subtitle, 7 Backend Keywords (comma separated), and short Description."
+    try: meta = ask_gemini(meta_prompt)
+    except: meta = "لم يتم توليد الوصف بسبب ضغط السيرفر."
     
-    # 4. تليجرام
+    # 5. تليجرام
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        status.text("✈️ إرسال الحزمة كاملة لتليجرام...")
-        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ كتاب {theme} جاهز!"}, files={"document": open(fname, "rb")})
-        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": meta})
+        status.text("✈️ إرسال لتليجرام...")
+        try:
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ كتاب {theme} جاهز!"}, files={"document": open(fname, "rb")}, timeout=30)
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": meta}, timeout=15)
+        except Exception as e: print(f"Telegram error: {e}")
 
     return fname, meta
 
-# --- التشغيل الذكي ---
+# --- التشغيل الذكي واليدوي ---
 is_auto = st.query_params.get("auto") == "true"
 status = st.empty()
 
 if is_auto:
-    st.warning("🤖 البوت يعمل الآن بشكل مستقل...")
+    st.warning("🤖 الوضع الآلي (الخفي) مفعل...")
     if not valid_keys: st.stop()
-    theme = ask_gemini("Pick one very profitable KDP niche (one phrase).").strip()
-    create_full_package(theme, "الكل", 40, status)
-    st.success("✅ تم النشر بنجاح!")
+    try:
+        theme = ask_gemini("Suggest ONE highly profitable children's activity book niche (e.g. Space Robots, Mermaid Adventures). Just the phrase.").strip()
+        create_full_package(theme, "منوع (كل الأنشطة)", 40, status)
+        st.success("✅ تم الإنتاج والإرسال الآلي بنجاح!")
+    except Exception as e:
+        status.error(f"خطأ في الوضع الآلي: {e}")
 else:
     st.title("💰 مصنع الأرباح: KDP Auto-Elite")
-    u_theme = st.text_input("موضوع الكتاب:", "Ocean Adventures")
-    u_pages = st.slider("عدد الصفحات:", 10, 80, 40)
-    if st.button("🚀 ابدأ الإنتاج الشامل"):
-        f, m = create_full_package(u_theme, "الكل", u_pages, status)
-        st.success("تفقد التليجرام الخاص بك!")
-        st.info(m)
+    st.markdown("---")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        u_theme = st.text_input("موضوع الكتاب (الثيم):", "Space Adventures")
+        u_pages = st.slider("عدد الصفحات المراد توليدها:", 10, 60, 20)
+    with col2:
+        types_list = ["منوع (كل الأنشطة)", "تلوين فقط", "رياضيات فقط", "كوميكس فقط", "سودوكو فقط"]
+        u_type = st.selectbox("نوع محتوى الكتاب:", types_list)
 
+    if st.button("🚀 ابدأ صناعة الكتاب الآن", use_container_width=True):
+        if not valid_keys:
+            st.error("⚠️ الرجاء وضع مفتاح API في متغيرات Render!")
+        else:
+            try:
+                f_name, meta_data = create_full_package(u_theme, u_type, u_pages, status)
+                st.success("🎉 اكتملت العملية! تفقد التليجرام الخاص بك.")
+                st.info(f"**بيانات النشر المقترحة:**\n\n{meta_data}")
+                with open(f_name, "rb") as f:
+                    st.download_button("⬇️ تحميل الكتاب محلياً (PDF)", f, file_name=f_name, use_container_width=True)
+            except Exception as e:
+                status.error(f"حدث خطأ أثناء التنفيذ: {e}")
+                st.code(traceback.format_exc())
