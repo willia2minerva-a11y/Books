@@ -5,171 +5,153 @@ from fpdf import FPDF
 import os
 import random
 import time
-import traceback
 
 # --- إعدادات الواجهة ---
-st.set_page_config(page_title="KDP Auto-Bot Elite", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="KDP Empire Builder", page_icon="💰", layout="centered")
 
-# --- جلب المتغيرات وتأمينها ---
+# --- جلب المتغيرات ---
 api_keys = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2"), os.getenv("GEMINI_API_KEY_3")]
-valid_keys = [key.strip() for key in api_keys if key and key.strip() != ""]
+valid_keys = [k.strip() for k in api_keys if k and k.strip() != ""]
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# --- محرك الذكاء الاصطناعي (المدرع بالكامل والمحدث) ---
+# --- محرك الذكاء الاصطناعي المدرع ---
 def ask_gemini(prompt_text):
-    # التسلسل الهرمي من الأحدث للأقدم
-    models = ['gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
-    errors_log = []
-    
+    models = ['gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    last_err = ""
     for key in valid_keys:
         genai.configure(api_key=key)
-        # إخفاء جزء من المفتاح للأمان عند عرض الأخطاء
-        safe_key_name = f"...{key[-4:]}" if len(key) > 4 else "Unknown_Key" 
-        
-        for model_name in models:
+        for model in models:
             try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt_text)
-                if response.text: 
-                    return response.text
+                m = genai.GenerativeModel(model)
+                res = m.generate_content(prompt_text)
+                if res.text: return res.text
             except Exception as e:
-                # تسجيل تفاصيل الخطأ بدقة شديدة
-                error_detail = f"🔑 المفتاح [{safe_key_name}] | 🧠 النموذج [{model_name}]: {str(e)}"
-                errors_log.append(error_detail)
-                time.sleep(1) # استراحة قصيرة لتجنب حظر الـ Spam
+                last_err = str(e)
                 continue
-                
-    # إذا استنفدنا كل المفاتيح وكل النماذج وفشلت جميعها
-    full_error_report = "\n".join(errors_log)
-    raise Exception(f"🚨 انهيار كامل للمحرك. تفاصيل الفشل لكل المفاتيح والنماذج:\n{full_error_report}")
+    raise Exception(f"فشلت المحاولات. آخر خطأ: {last_err}")
 
-def generate_and_review_prompts(theme, count):
-    draft_prompt = f"Generate {count} unique image prompts for a children's coloring book. Theme: {theme}. Return ONLY prompts, one per line."
-    drafts = ask_gemini(draft_prompt)
-    review_prompt = f"Rewrite these prompts to be strictly: thick black outlines, pure white background, flat vector, no color, simple line art:\n{drafts}\nReturn ONLY prompts, one per line."
-    final_prompts = ask_gemini(review_prompt)
-    return [p.strip() for p in final_prompts.split('\n') if p.strip()]
+# --- خوارزميات الأنشطة المربحة (Logic Based) ---
 
-# --- خوارزميات الألغاز ---
-def generate_sudoku_board():
-    base = 3; side = base * base
-    def pattern(r, c): return (base * (r % base) + r // base + c) % side
-    def shuffle(s): return random.sample(s, len(s))
+def draw_math_page(pdf, page_num):
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 20)
+    pdf.cell(0, 1, f"Math Practice - Page {page_num}", align="C", ln=True)
+    pdf.set_font("Arial", "", 18)
+    pdf.ln(0.5)
+    for i in range(8): # 8 عمليات في الصفحة
+        num1 = random.randint(10, 99)
+        num2 = random.randint(1, 10)
+        op = random.choice(['+', '-', 'x'])
+        pdf.cell(0, 0.8, f"{i+1})  {num1}  {op}  {num2}  =  _______", ln=True, align="C")
+
+def draw_comic_panels(pdf, page_num):
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 18)
+    pdf.cell(0, 0.5, f"Create Your Comic - Page {page_num}", align="C", ln=True)
+    pdf.set_line_width(0.03)
+    layouts = [
+        [(0.75, 1.5, 3.5, 4), (4.25, 1.5, 3.5, 4), (0.75, 5.75, 7, 4)], # Layout 1
+        [(0.75, 1.5, 7, 3), (0.75, 4.75, 7, 3), (0.75, 8, 7, 2.5)]      # Layout 2
+    ]
+    selected = random.choice(layouts)
+    for x, y, w, h in selected:
+        pdf.rect(x, y, w, h)
+
+def generate_sudoku():
+    base = 3; side = base*base
     rBase = range(base)
-    rows = [g * base + r for g in shuffle(rBase) for r in shuffle(rBase)]
-    cols = [g * base + c for g in shuffle(rBase) for c in shuffle(rBase)]
-    nums = shuffle(range(1, base * base + 1))
-    board = [[nums[pattern(r, c)] for c in cols] for r in rows]
-    for p in random.sample(range(side * side), side * side // 2): board[p // side][p % side] = 0
+    rows = [g*base + r for g in random.sample(rBase,base) for r in random.sample(rBase,base)]
+    cols = [g*base + c for g in random.sample(rBase,base) for c in random.sample(rBase,base)]
+    nums = random.sample(range(1,side+1),side)
+    board = [[nums[(base*(r%base)+r//base+c)%side] for c in cols] for r in rows]
+    for p in random.sample(range(side*side), side*side*2//3): board[p//side][p%side] = 0
     return board
 
-def draw_sudoku(pdf, board, num):
+def draw_sudoku_page(pdf, board, num):
     pdf.add_page()
-    pdf.set_font("Arial", "B", 18); pdf.cell(0, 1, f"Puzzle #{num} - Sudoku", align="C", ln=True)
-    start_x, start_y, cell_size = 1.25, 2.5, 0.66
-    for i in range(10):
-        pdf.set_line_width(0.05 if i % 3 == 0 else 0.01)
-        pdf.line(start_x, start_y + i * cell_size, start_x + 9 * cell_size, start_y + i * cell_size)
-        pdf.line(start_x + i * cell_size, start_y, start_x + i * cell_size, start_y + 9 * cell_size)
-    pdf.set_font("Arial", "B", 16)
+    pdf.set_font("Arial", "B", 20); pdf.cell(0, 1, f"Sudoku Challenge #{num}", align="C", ln=True)
+    start_x, start_y, cs = 1.25, 2.5, 0.66
     for r in range(9):
         for c in range(9):
-            if board[r][c] != 0: pdf.text(start_x + c * cell_size + 0.25, start_y + r * cell_size + 0.45, str(board[r][c]))
+            pdf.set_line_width(0.05 if (r%3==0 or c%3==0) else 0.01)
+            pdf.rect(start_x+c*cs, start_y+r*cs, cs, cs)
+            if board[r][c] != 0: pdf.text(start_x+c*cs+0.25, start_y+r*cs+0.45, str(board[r][c]))
 
-def draw_tictactoe(pdf, num):
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 18); pdf.cell(0, 1, f"Tic-Tac-Toe - Page {num}", align="C", ln=True)
-    pdf.set_line_width(0.02)
-    for px, py in [(1.5, 2), (4.5, 2), (1.5, 5), (4.5, 5), (1.5, 8), (4.5, 8)]:
-        step = 2.0 / 3
-        pdf.line(px + step, py, px + step, py + 2.0); pdf.line(px + 2*step, py, px + 2*step, py + 2.0)
-        pdf.line(px, py + step, px + 2.0, py + step); pdf.line(px, py + 2*step, px + 2.0, py + 2*step)
+# --- محرك النشر الآلي (Metadata + PDF) ---
 
-def send_to_telegram(file_path, caption):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return False
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument"
+def create_full_package(theme, book_type, pages, status):
+    pdf = FPDF(unit="in", format=(8.5, 11))
+    pdf.set_auto_page_break(0)
+    
+    # 1. الغلاف
+    status.text(f"🎨 جاري تصميم الغلاف لـ {theme}...")
     try:
-        with open(file_path, "rb") as f:
-            resp = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f}, timeout=30)
-        return resp.status_code == 200
-    except Exception as e:
-        print(f"Telegram Error: {e}")
-        return False
+        url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(f'kids book cover, {theme}, vibrant')}?width=816&height=1056&nologo=true"
+        with open("c.jpg", "wb") as f: f.write(requests.get(url, timeout=20).content)
+        pdf.add_page(); pdf.image("c.jpg", x=0, y=0, w=8.5, h=11); os.remove("c.jpg")
+    except: pass
 
-# --- دالة التشغيل الرئيسية ---
-def run_bot():
-    if not valid_keys: 
-        st.error("⚠️ مفاتيح API مفقودة من السيرفر!")
-        return
-        
-    try:
-        status = st.empty()
-        pdf = FPDF(unit="in", format=(8.5, 11))
-        pdf.set_auto_page_break(0)
+    # 2. العنوان والأنشطة
+    pdf.add_page(); pdf.set_font("Arial", "B", 30); pdf.set_y(4)
+    pdf.cell(0, 1, f"The Big Book of {theme}", align="C", ln=True)
 
-        status.text("🧠 البوت يحلل السوق للبحث عن أفضل نيش...")
-        theme = ask_gemini("Suggest ONE highly profitable children's activity book niche (just the name).").strip()
-        book_title = f"The Ultimate {theme} Activity Book"
-
-        status.text(f"🎨 رسم الغلاف لنيش: {theme}...")
+    # توزيع المحتوى بالتساوي
+    per_type = pages // 4
+    
+    # - التلوين
+    status.text("🧠 توليد أوامر التلوين...")
+    p_raw = ask_gemini(f"List {per_type} coloring prompts for {theme}. Bold lines, white bg. One per line.")
+    for i, p in enumerate(p_raw.split('\n')[:per_type]):
         try:
-            cover_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(f'kids activity book cover, {theme}, colorful')}?width=816&height=1056&nologo=true"
-            # حماية الاتصال: إذا تأخر السيرفر يتخطى بسلام
-            cover_resp = requests.get(cover_url, timeout=15)
-            if cover_resp.status_code == 200:
-                with open("cover.jpg", "wb") as f: f.write(cover_resp.content)
-                pdf.add_page(); pdf.image("cover.jpg", x=0, y=0, w=8.5, h=11); os.remove("cover.jpg")
-        except Exception as e: 
-            print(f"Cover generation skipped: {e}")
+            img_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={i}"
+            with open("t.jpg", "wb") as f: f.write(requests.get(img_url, timeout=20).content)
+            pdf.add_page(); pdf.image("t.jpg", x=0.75, y=1.5, w=7, h=7); pdf.add_page(); os.remove("t.jpg")
+        except: continue
 
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 26); pdf.set_y(4); pdf.cell(0, 1, book_title, align="C", ln=True)
+    # - الرياضيات
+    status.text("🔢 توليد صفحات الرياضيات...")
+    for i in range(per_type): draw_math_page(pdf, i+1)
 
-        status.text("🔍 معالجة أوامر التلوين بصرامة KDP...")
-        prompts = generate_and_review_prompts(theme, 10)
-        
-        for i, p in enumerate(prompts):
-            status.text(f"🖌️ رسم وتنزيل الصورة {i+1}/10...")
-            try:
-                img_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={i}"
-                img_resp = requests.get(img_url, timeout=15)
-                if img_resp.status_code == 200:
-                    with open("temp.jpg", "wb") as f: f.write(img_resp.content)
-                    pdf.add_page(); pdf.image("temp.jpg", x=0.75, y=1.5, w=7, h=7); pdf.add_page()
-                    os.remove("temp.jpg")
-            except Exception as e: 
-                print(f"Image {i+1} skipped due to error: {e}")
-                continue
+    # - الكوميكس
+    status.text("📝 رسم قوالب الكوميكس...")
+    for i in range(per_type): draw_comic_panels(pdf, i+1)
 
-        status.text("🔢 رسم الألغاز المعمارية...")
-        for i in range(3): draw_sudoku(pdf, generate_sudoku_board(), i+1)
-        for i in range(2): draw_tictactoe(pdf, i+1)
+    # - السودوكو
+    status.text("🧩 توليد السودوكو...")
+    for i in range(per_type): draw_sudoku_page(pdf, generate_sudoku(), i+1)
 
-        file_name = f"KDP_{theme.replace(' ', '_')}.pdf"
-        pdf.output(file_name)
-        
-        status.text("✈️ إرسال لتليجرام...")
-        if send_to_telegram(file_name, f"✅ تم بحمد الله.\nالنيش: {theme}\nمستعد للرفع المباشر."):
-            st.success("تم التصميم والإرسال لتليجرام بنجاح! 📱")
-        else:
-            st.warning("فشل الإرسال لتليجرام. قد يكون التوكن خاطئاً أو الملف كبيراً جداً.")
-            
-    except Exception as e:
-        # عرض الخطأ التفصيلي في الواجهة إذا انهار البوت
-        st.error("❌ توقفت العملية. إليك التقرير التقني:")
-        st.code(str(e))
-        st.error(traceback.format_exc()) # يعرض مسار الخطأ بالكامل للمبرمج
+    fname = f"KDP_PRO_{int(time.time())}.pdf"
+    pdf.output(fname)
+    
+    # 3. SEO Metadata
+    status.text("📝 توليد بيانات النشر (SEO)...")
+    meta = ask_gemini(f"Create KDP Metadata for {theme} activity book. Include Title, Subtitle, 7 Keywords, and Description.")
+    
+    # 4. تليجرام
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        status.text("✈️ إرسال الحزمة كاملة لتليجرام...")
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ كتاب {theme} جاهز!"}, files={"document": open(fname, "rb")})
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": meta})
 
-# --- آلية التشغيل (يدوي أو آلي) ---
-is_auto_mode = st.query_params.get("auto") == "true"
+    return fname, meta
 
-if is_auto_mode:
-    st.warning("⚙️ الوضع الآلي مفعل. جاري بناء الكتاب وإرساله...")
-    run_bot()
+# --- التشغيل الذكي ---
+is_auto = st.query_params.get("auto") == "true"
+status = st.empty()
+
+if is_auto:
+    st.warning("🤖 البوت يعمل الآن بشكل مستقل...")
+    if not valid_keys: st.stop()
+    theme = ask_gemini("Pick one very profitable KDP niche (one phrase).").strip()
+    create_full_package(theme, "الكل", 40, status)
+    st.success("✅ تم النشر بنجاح!")
 else:
-    st.title("🤖 وكالة KDP الآلية (Elite)")
-    st.info("💡 النظام الآن محمي ضد الأخطاء، ويدعم أحدث نماذج Gemini.")
-    if st.button("🚀 بدء دورة العمل والتصدير لـ Telegram"):
-        run_bot()
+    st.title("💰 مصنع الأرباح: KDP Auto-Elite")
+    u_theme = st.text_input("موضوع الكتاب:", "Ocean Adventures")
+    u_pages = st.slider("عدد الصفحات:", 10, 80, 40)
+    if st.button("🚀 ابدأ الإنتاج الشامل"):
+        f, m = create_full_package(u_theme, "الكل", u_pages, status)
+        st.success("تفقد التليجرام الخاص بك!")
+        st.info(m)
 
