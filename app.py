@@ -7,25 +7,18 @@ import random
 import time
 
 # --- إعدادات الواجهة ---
-st.set_page_config(page_title="KDP Auto-Agency V5", page_icon="🤖", layout="centered")
-st.title("🤖 وكالة KDP الآلية (الإصدار الشامل)")
-st.markdown("**Made by Erwin Smith** | متصل بتليجرام ✈️")
-st.divider()
+st.set_page_config(page_title="KDP Auto-Bot", page_icon="🤖", layout="centered")
 
 # --- جلب المتغيرات من السيرفر ---
 api_keys = [os.getenv("GEMINI_API_KEY_1"), os.getenv("GEMINI_API_KEY_2"), os.getenv("GEMINI_API_KEY_3")]
-valid_keys = [key for key in api_keys if key]
+valid_keys = [key.strip() for key in api_keys if key and key.strip() != ""] # إزالة المسافات الفارغة بالخطأ
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-if not valid_keys:
-    st.warning("⚠️ لا توجد مفاتيح API. أدخل مفتاحاً للعمل المؤقت:")
-    manual_key = st.text_input("Gemini API Key:", type="password")
-    if manual_key: valid_keys.append(manual_key)
-
-# --- محرك الذكاء الاصطناعي (المدرع) ---
+# --- محرك الذكاء الاصطناعي (مع كشف الأخطاء) ---
 def ask_gemini(prompt_text):
     models = ['gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-pro']
+    last_error = ""
     for key in valid_keys:
         genai.configure(api_key=key)
         for model_name in models:
@@ -33,25 +26,15 @@ def ask_gemini(prompt_text):
                 model = genai.GenerativeModel(model_name)
                 response = model.generate_content(prompt_text)
                 if response.text: return response.text
-            except: continue
-    raise Exception("❌ فشلت جميع المفاتيح والنماذج. راجع حصة الاستخدام.")
+            except Exception as e:
+                last_error = str(e)
+                continue
+    raise Exception(f"تفاصيل الخطأ: {last_error}")
 
-# --- نظام مراجعة الجودة (QA System) ---
 def generate_and_review_prompts(theme, count):
-    # 1. التوليد المبدئي
-    draft_prompt = f"""Generate {count} unique image prompts for a children's coloring book. 
-    Theme: {theme}. Target: Western kids. Return ONLY prompts, one per line."""
+    draft_prompt = f"Generate {count} unique image prompts for a children's coloring book. Theme: {theme}. Return ONLY prompts, one per line."
     drafts = ask_gemini(draft_prompt)
-    
-    # 2. المراجعة والتصحيح الصارم لـ KDP
-    review_prompt = f"""You are a strict KDP Quality Assurance reviewer. Review these image prompts:
-    {drafts}
-    Rewrite EVERY prompt to strictly include these rules:
-    - "thick black outlines"
-    - "pure white background"
-    - "simple flat vector"
-    - "NO shading, NO color, NO grayscale"
-    Return ONLY the corrected prompts, one per line."""
+    review_prompt = f"Rewrite these prompts to be strictly: thick black outlines, pure white background, flat vector, no color:\n{drafts}\nReturn ONLY prompts, one per line."
     final_prompts = ask_gemini(review_prompt)
     return [p.strip() for p in final_prompts.split('\n') if p.strip()]
 
@@ -65,14 +48,12 @@ def generate_sudoku_board():
     cols = [g * base + c for g in shuffle(rBase) for c in shuffle(rBase)]
     nums = shuffle(range(1, base * base + 1))
     board = [[nums[pattern(r, c)] for c in cols] for r in rows]
-    squares = side * side
-    for p in random.sample(range(squares), squares * 1 // 2): board[p // side][p % side] = 0
+    for p in random.sample(range(side * side), side * side // 2): board[p // side][p % side] = 0
     return board
 
 def draw_sudoku(pdf, board, num):
     pdf.add_page()
-    pdf.set_font("Arial", "B", 18)
-    pdf.cell(0, 1, f"Puzzle #{num} - Sudoku", align="C", ln=True)
+    pdf.set_font("Arial", "B", 18); pdf.cell(0, 1, f"Puzzle #{num} - Sudoku", align="C", ln=True)
     start_x, start_y, cell_size = 1.25, 2.5, 0.66
     for i in range(10):
         pdf.set_line_width(0.05 if i % 3 == 0 else 0.01)
@@ -85,15 +66,13 @@ def draw_sudoku(pdf, board, num):
 
 def draw_tictactoe(pdf, num):
     pdf.add_page()
-    pdf.set_font("Arial", "B", 18)
-    pdf.cell(0, 1, f"Tic-Tac-Toe - Page {num}", align="C", ln=True)
+    pdf.set_font("Arial", "B", 18); pdf.cell(0, 1, f"Tic-Tac-Toe - Page {num}", align="C", ln=True)
     pdf.set_line_width(0.02)
     for px, py in [(1.5, 2), (4.5, 2), (1.5, 5), (4.5, 5), (1.5, 8), (4.5, 8)]:
         step = 2.0 / 3
         pdf.line(px + step, py, px + step, py + 2.0); pdf.line(px + 2*step, py, px + 2*step, py + 2.0)
         pdf.line(px, py + step, px + 2.0, py + step); pdf.line(px, py + 2*step, px + 2.0, py + 2*step)
 
-# --- إرسال للملف عبر تليجرام ---
 def send_to_telegram(file_path, caption):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return False
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument"
@@ -101,27 +80,24 @@ def send_to_telegram(file_path, caption):
         resp = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f})
     return resp.status_code == 200
 
-# --- واجهة المستخدم الرئيسية ---
-st.info("💡 اضغط على الزر ليقوم البوت بتوليد الكتاب وإرساله مباشرة لهاتفك!")
-
-if st.button("🚀 تصميم وإرسال الكتاب لـ Telegram الآن", use_container_width=True):
-    if not valid_keys: st.stop()
-    
+# --- دالة التشغيل الرئيسية ---
+def run_bot():
+    if not valid_keys: 
+        st.error("مفاتيح API مفقودة!")
+        return
+        
     try:
-        progress = st.progress(0)
         status = st.empty()
         pdf = FPDF(unit="in", format=(8.5, 11))
         pdf.set_auto_page_break(0)
 
-        # 1. اختيار النيش التلقائي (Auto-Niche)
-        status.text("🧠 البوت يبحث عن أفضل نيش غير مشبع...")
-        theme = ask_gemini("Suggest ONE highly profitable, low-competition children's activity book niche (just the name, e.g., 'Space Dinosaurs').").strip()
+        status.text("🧠 البحث عن نيش...")
+        theme = ask_gemini("Suggest ONE highly profitable children's activity book niche (just the name).").strip()
         book_title = f"The Ultimate {theme} Activity Book"
 
-        # 2. الغلاف
-        status.text(f"🎨 جاري رسم الغلاف (النيش: {theme})...")
+        status.text("🎨 رسم الغلاف...")
         try:
-            cover_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(f'kids activity book cover, {theme}, colorful, no text')}?width=816&height=1056&nologo=true"
+            cover_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(f'kids activity book cover, {theme}, colorful')}?width=816&height=1056&nologo=true"
             with open("cover.jpg", "wb") as f: f.write(requests.get(cover_url, timeout=15).content)
             pdf.add_page(); pdf.image("cover.jpg", x=0, y=0, w=8.5, h=11); os.remove("cover.jpg")
         except: pass
@@ -129,40 +105,42 @@ if st.button("🚀 تصميم وإرسال الكتاب لـ Telegram الآن",
         pdf.add_page()
         pdf.set_font("Arial", "B", 26); pdf.set_y(4); pdf.cell(0, 1, book_title, align="C", ln=True)
 
-        # 3. التلوين (مع المراجعة الصارمة)
-        status.text("🔍 جاري كتابة ومراجعة أوامر التلوين لضمان جودة KDP...")
-        prompts = generate_and_review_prompts(theme, 10) # 10 صفحات تلوين
-        
+        status.text("🔍 معالجة التلوين...")
+        prompts = generate_and_review_prompts(theme, 10)
         for i, p in enumerate(prompts):
-            status.text(f"🖌️ رسم صفحة التلوين {i+1}/10...")
+            status.text(f"🖌️ رسم الصورة {i+1}/10...")
             try:
                 img_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={i}"
                 with open("temp.jpg", "wb") as f: f.write(requests.get(img_url, timeout=15).content)
-                pdf.add_page(); pdf.image("temp.jpg", x=0.75, y=1.5, w=7, h=7)
-                pdf.add_page() # ظهر فارغ
+                pdf.add_page(); pdf.image("temp.jpg", x=0.75, y=1.5, w=7, h=7); pdf.add_page()
                 os.remove("temp.jpg")
             except: continue
-            progress.progress((i + 1) / 15)
 
-        # 4. الألغاز المبرمجة
-        status.text("🔢 جاري بناء شبكات السودوكو و X-O...")
+        status.text("🔢 رسم الألغاز...")
         for i in range(3): draw_sudoku(pdf, generate_sudoku_board(), i+1)
         for i in range(2): draw_tictactoe(pdf, i+1)
-        progress.progress(1.0)
 
-        # 5. الحفظ والإرسال
-        status.text("✈️ جاري إرسال الكتاب لتليجرام...")
         file_name = f"KDP_{theme.replace(' ', '_')}.pdf"
         pdf.output(file_name)
         
-        if send_to_telegram(file_name, f"✅ يا صاح! كتابك جاهز.\nالنيش: {theme}\nجاهز للرفع على KDP."):
-            st.success("تم الإرسال لتليجرام بنجاح! 📱")
+        status.text("✈️ إرسال لتليجرام...")
+        if send_to_telegram(file_name, f"✅ النيش: {theme}"):
+            st.success("تم الإرسال لتليجرام! 📱")
         else:
-            st.warning("تم صنع الكتاب لكن الإرسال لتليجرام فشل (تأكد من الـ Token والـ ID).")
+            st.warning("فشل الإرسال لتليجرام، تحقق من التوكن.")
             
-        with open(file_name, "rb") as f:
-            st.download_button("⬇️ تحميل احتياطي من هنا", f, file_name=file_name)
-
     except Exception as e:
-        st.error(f"خطأ حرج: {e}")
+        st.error(f"خطأ: {e}")
 
+# --- آلية التشغيل (يدوي أو آلي) ---
+# إذا كان الرابط يحتوي على ?auto=true سيعمل تلقائياً
+is_auto_mode = st.query_params.get("auto") == "true"
+
+if is_auto_mode:
+    st.warning("⚙️ الوضع الآلي مفعل. جاري بناء الكتاب وإرساله...")
+    run_bot()
+else:
+    st.title("🤖 وكالة KDP الآلية")
+    st.info("💡 اضغط للتشغيل اليدوي، أو استخدم رابط الأتمتة للتشغيل الآلي.")
+    if st.button("🚀 تصميم وإرسال الكتاب لـ Telegram الآن"):
+        run_bot()
