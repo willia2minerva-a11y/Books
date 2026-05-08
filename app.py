@@ -8,13 +8,13 @@ import time
 # --- إعدادات الصفحة ---
 st.set_page_config(page_title="KDP Auto-Author", page_icon="🚀", layout="centered")
 
-# --- تنسيق الواجهة ---
 st.markdown("""
     <style>
     .main { background-color: #f0f2f6; }
     .stButton>button { width: 100%; border-radius: 10px; height: 3em; background-color: #2980b9; color: white; }
     </style>
-    """, unsafe_allow_stdio=True)
+    """, unsafe_allow_html=True)
+
 
 st.title("🌌 Outer Space KDP Generator")
 st.info("تم التطوير بواسطة: Erwin Smith")
