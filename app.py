@@ -1,5 +1,5 @@
 """
-KDP Factory Pro - الإصدار الأسطوري V12.1 (مع نظام التعويض الذكي لنفس النوع)
+KDP Factory Pro - الإصدار الأسطوري V12.2 (معالج توافق السيرفرات)
 الهندسة المعمارية: Irwin Smith | التطوير المتقدم: AI
 """
 
@@ -85,7 +85,7 @@ class GeminiEngine:
 class ImageGenerator:
     @staticmethod
     def generate(prompt, filename):
-        for _ in range(2): # قللنا المحاولات لنسرع الانتقال للرسمة البديلة
+        for _ in range(2): 
             try:
                 url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=1024&height=1024&nologo=true&seed={random.randint(1,9999)}"
                 resp = requests.get(url, timeout=12)
@@ -185,13 +185,12 @@ class KDPFactory:
         # --- التلوين (مع نظام الاستبدال الذكي) ---
         if "تلوين" in activities:
             self.status("🖌️ جاري رسم المشاهد (مع نظام التعويض)...")
-            # نطلب ضعف العدد المطلوب كأفكار احتياطية
             items = GeminiEngine.ask(f"Give {per_type + 15} simple single items related to {theme} for kids coloring. One item per line. No numbers.").split('\n')
             
             success_count = 0
             for item in items:
                 if success_count >= per_type: 
-                    break # إذا وصلنا للعدد المطلوب، نتوقف
+                    break
                 
                 if not item.strip(): continue
                 
@@ -212,7 +211,6 @@ class KDPFactory:
                     self.progress(min(1.0, page_counter/pages))
                 else:
                     self.status(f"⚠️ فشل رسم '{item.strip()}'.. جاري تجربة رسمة بديلة من الاحتياط!")
-                    # لا نزيد success_count، فيدور الـ loop للعنصر التالي
 
         # الرياضيات
         if "رياضيات" in activities:
@@ -272,10 +270,26 @@ def send_to_telegram(file_path, theme, metadata):
     except: pass
 
 # ------------------------------------------------------------------------------
+# دالة فحص الوضع الآلي (المعالجة المتقدمة للإصدارات)
+# ------------------------------------------------------------------------------
+def check_auto_mode():
+    try:
+        # للإصدارات الحديثة من Streamlit
+        if hasattr(st, 'query_params'):
+            return st.query_params.get("auto") == "true"
+        # للإصدارات القديمة من Streamlit (مثل السيرفر الخاص بك)
+        elif hasattr(st, 'experimental_get_query_params'):
+            params = st.experimental_get_query_params()
+            return params.get("auto", [""])[0] == "true"
+    except:
+        pass
+    return False
+
+# ------------------------------------------------------------------------------
 # الواجهة والتشغيل
 # ------------------------------------------------------------------------------
 def main():
-    if st.query_params.get("auto") == "true":
+    if check_auto_mode():
         st.warning("🤖 النظام الآلي يعمل في الخلفية...")
         if API_KEYS[0] == "DUMMY": st.stop()
         theme = GeminiEngine.ask("Suggest ONE highly profitable children's activity book niche (e.g. Space Dogs). Just the phrase.").strip()
@@ -327,4 +341,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
