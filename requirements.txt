@@ -1,4 +1,6 @@
-streamlit==1.34.0
-google-generativeai>=0.5.2
-fpdf2==2.7.9
+streamlit==1.29.0
+google-generativeai==0.3.2
 requests==2.31.0
+fpdf==1.7.2
+Pillow==10.1.0
+aiohttp==3.9.0
