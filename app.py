@@ -18,11 +18,7 @@ import traceback
 import string
 import hashlib
 import json
-import asyncio
-import aiohttp
 from datetime import datetime
-import threading
-import schedule
 
 # ------------------------------------------------------------------------------
 # اعدادات الصفحة
@@ -180,25 +176,24 @@ class GeminiEngine:
             return "kids activity book, coloring book, puzzle book, children's story"
         
         elif "sales" in prompt_lower or "selling" in prompt_lower:
-            return self._get_sales_tips()
+            return cls._get_sales_tips()
         
         else:
             return "Default response for KDP book generation"
     
     @classmethod
     def _get_sales_tips(cls):
-        """نصائح مبيعات مخصصة لتباع على امازون"""
         return """
-        === نصائح لبيع الكتاب على امازون KDP ===
-        
-        1. السعر المثالي: 6.99 - 9.99 دولار
-        2. الكلمات المفتاحية: ضعها في عنوان الكتاب الفرعي
-        3. الغلاف: استخدم ألوان زاهية وخط واضح
-        4. المعاينة: اجعل اول 10% من الكتاب مجاني للمعاينة
-        5. المراجعات: اطلب من الاهل تقييم الكتاب
-        6. الفئة العمرية: حددها بدقة 3-5 او 5-7
-        7. السلسلة: اصدر اجزاء متعددة من نفس الموضوع
-        """
+=== نصائح لبيع الكتاب على امازون KDP ===
+
+1. السعر المثالي: 6.99 - 9.99 دولار
+2. الكلمات المفتاحية: ضعها في عنوان الكتاب الفرعي
+3. الغلاف: استخدم الوان زاهية وخط واضح
+4. المعاينة: اجعل اول 10% من الكتاب مجاني للمعاينة
+5. المراجعات: اطلب من الاهل تقييم الكتاب
+6. الفئة العمرية: حددها بدقة 3-5 او 5-7
+7. السلسلة: اصدر اجزاء متعددة من نفس الموضوع
+"""
 
 # ------------------------------------------------------------------------------
 # نظام الصور
@@ -499,7 +494,8 @@ class KDPProductionEngine:
             col = random.randint(0, size - 1 - len(word))
             
             for i, ch in enumerate(word):
-                grid[row][col + i] = ch
+                if ch.isalpha():
+                    grid[row][col + i] = ch
         
         for i in range(size):
             for j in range(size):
@@ -517,7 +513,8 @@ class KDPProductionEngine:
         self.pdf.set_font('Arial', '', 10)
         self.pdf.cell(0, 0.2, "Find these words:", align='C')
         self.pdf.ln(0.2)
-        self.pdf.cell(0, 0.2, " - ".join(words), align='C')
+        words_text = " - ".join([w.upper() for w in words])
+        self.pdf.cell(0, 0.2, words_text, align='C')
     
     def _generate_marketing_materials(self):
         theme = self.config['theme']
@@ -538,7 +535,6 @@ class KDPProductionEngine:
         }
     
     def _generate_whatsapp_message(self, theme, titles, description):
-        """رسالة جاهزة للنشر على واتساب للتسويق"""
         return f"""
 🔥 *كتاب جديد جاهز للبيع على امازون!* 🔥
 
@@ -705,7 +701,7 @@ def send_to_telegram(file_path, caption, marketing_materials):
         return False
 
 # ------------------------------------------------------------------------------
-# النظام الآلي (Auto Pilot)
+# النظام الآلي (Auto Pilot) - بدون مكتبة schedule
 # ------------------------------------------------------------------------------
 
 class AutoPilot:
@@ -756,10 +752,11 @@ def render_book_selector():
     for i, (key, book) in enumerate(BOOK_TYPES.items()):
         col_idx = i % 4
         with cols[col_idx]:
+            border = '2px solid gold' if selected_type == key else 'none'
             st.markdown(f"""
             <div style='background: linear-gradient(135deg, {book["color"]}, {book["color"]}dd); 
                         border-radius: 15px; padding: 15px; text-align: center; margin: 5px;
-                        border: {('2px solid gold' if selected_type == key else 'none')}'>
+                        border: {border};'>
                 <div style='font-size: 40px;'>{book["icon"]}</div>
                 <h4>{book["name"]}</h4>
                 <p style='font-size: 10px;'>{book["description"]}</p>
