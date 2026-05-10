@@ -1,7 +1,7 @@
 """
-KDP Factory Pro - The Ultimate Titan V17.0
+KDP Factory Pro - The Ultimate Titan V18.0
 Architect & Creator: Irwin Smith | AI Logic: Elite Shield
-Features: 100% Automated Background Mode, UI Tabs, Facing Pages, Full Puzzle Engine
+Features: Open Mode, Factory Mode, Low-Content, Facing Pages, Dynamic Stability
 """
 
 import streamlit as st
@@ -13,6 +13,8 @@ import random
 import time
 import traceback
 import string
+import re
+from datetime import datetime
 
 # ------------------------------------------------------------------------------
 # 1. منع انهيار الجلسة (Session Fix)
@@ -75,7 +77,7 @@ class ImageGenerator:
     @staticmethod
     def generate(prompt, filename, style="coloring"):
         styles = {
-            "coloring": "bold black and white line art, thick outlines, white background, coloring book style, NO shading",
+            "coloring": "bold black and white line art, thick outlines, white background, coloring book style, NO shading, clean vector",
             "dots": "dot-to-dot puzzle for kids, simple numbered dots, black and white, white background",
             "cover": "vibrant colorful children's book cover, high resolution, professional, NO text, NO words"
         }
@@ -151,7 +153,7 @@ class KDPBook(FPDF):
     def __init__(self):
         super().__init__(unit="in", format=(8.5, 11))
         self.set_auto_page_break(False)
-        self.set_margins(0.875, 0.5, 0.75) # Gutter margin included
+        self.set_margins(0.875, 0.5, 0.75)
 
     def add_lined_page(self):
         self.add_page(); self.set_draw_color(200, 200, 200)
@@ -169,28 +171,31 @@ class ProductionEngine:
     def run(self):
         t, p, m = self.config['theme'], self.config['pages'], self.config['mode']
         
-        self.log(f"🎨 جاري إنشاء الغلاف الاحترافي لـ {t}...")
-        if ImageGenerator.generate(f"happy {t} kids illustration", "c.jpg", "cover"):
+        self.log(f"🎨 جاري إنشاء الغلاف الاحترافي لـ {t[:30]}...")
+        if ImageGenerator.generate(f"happy {t[:30]} kids illustration", "c.jpg", "cover"):
             self.pdf.add_page(); self.pdf.image("c.jpg", x=0, y=0, w=8.5, h=11); os.remove("c.jpg")
         
         self.pdf.add_page(); self.pdf.set_font("Arial", "B", 36); self.pdf.set_y(4)
-        self.pdf.cell(0, 1, "THE BIG BOOK OF", align="C", ln=True)
-        self.pdf.cell(0, 1, t.upper(), align="C", ln=True)
+        self.pdf.set_font("Arial", "B", 24)
+        self.pdf.multi_cell(0, 0.5, f"THE BIG BOOK OF\n{t.upper()}", align="C")
 
-        # التوزيع حسب النوع
         if m == "تلوين فقط": self._coloring_mode(p, t)
         elif m == "قصص ورسومات": self._story_mode(p, t)
         elif m == "ألغاز منوعة": self._puzzles_mode(p, t)
         elif m == "تعليم (A-Z)": self._alphabet_mode(p)
         elif m == "كوميكس فقط": self._comics_mode(p, t)
         elif m == "وصل النقاط": self._dots_mode(p, t)
-        else: # منوع
+        elif m == "ملاحظات مسطرة": self._lined_mode(p)
+        else:
             part = max(1, p // 3)
             self._coloring_mode(part, t)
             self._puzzles_mode(part, t)
             self._comics_mode(part, t)
 
-        fname = f"KDP_{t.replace(' ', '_')}_{int(time.time())}.pdf"
+        # 🛡️ الدرع: تنظيف اسم الملف
+        clean_theme = re.sub(r'[^a-zA-Z0-9]', '_', t)[:30]
+        fname = f"KDP_{clean_theme}_{int(time.time())}.pdf"
+        
         self.pdf.output(fname)
         meta = GeminiEngine.ask(f"Write KDP SEO listing for {t} book. Title, Subtitle, 7 Keywords, Description with bullets.")
         return fname, meta
@@ -201,23 +206,21 @@ class ProductionEngine:
         for item in items:
             if success >= count: break
             if len(item.strip()) < 3: continue
-            self.log(f"🖌️ جاري رسم المشهد {success+1}: {item.strip()}...")
+            self.log(f"🖌️ جاري رسم المشهد {success+1}: {item.strip()[:20]}...")
             if ImageGenerator.generate(f"cute {item.strip()}", "t.jpg"):
                 self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=1.5, w=6.5, h=6.5)
-                self.pdf.add_page(); os.remove("t.jpg"); success += 1 # صفحة حماية
+                self.pdf.add_page(); os.remove("t.jpg"); success += 1
 
     def _story_mode(self, count, theme):
         raw = GeminiEngine.ask(f"Write {count} part exciting story about {theme}. Part=2 sentences. Split '||'.")
         parts = [p.strip() for p in raw.split('||')][:count]
         for i, text in enumerate(parts):
             self.log(f"📖 جاري إنشاء الجزء القصصي {i+1}...")
-            # صفحة القصة
             self.pdf.add_page(); self.pdf.set_font("Arial", "I", 22); self.pdf.set_y(4); self.pdf.multi_cell(0, 0.5, text, align="C")
-            # صفحة التلوين المقابلة
             if ImageGenerator.generate(f"scene for {text[:40]}", "t.jpg"):
                 self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=2, w=6.5, h=6.5); os.remove("t.jpg")
             else: self.pdf.add_page()
-            self.pdf.add_page() # حماية اللون
+            self.pdf.add_page()
 
     def _alphabet_mode(self, count):
         L = list(string.ascii_uppercase)[:min(count, 26)]
@@ -235,7 +238,6 @@ class ProductionEngine:
 
     def _puzzles_mode(self, count, theme):
         per = max(1, count // 3)
-        # Sudoku
         for i in range(per):
             self.log(f"🧩 جاري بناء سودوكو {i+1}...")
             b = PuzzleEngine.sudoku(); self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(1); self.pdf.cell(0, 1, f"Sudoku #{i+1}", align="C")
@@ -245,7 +247,6 @@ class ProductionEngine:
                     self.pdf.set_line_width(0.05 if (r%3==0 or c%3==0) else 0.01)
                     self.pdf.rect(sx+c*cs, sy+r*cs, cs, cs)
                     if b[r][c] != 0: self.pdf.set_font("Arial", "B", 20); self.pdf.text(sx+c*cs+0.25, sy+r*cs+0.45, str(b[r][c]))
-        # Maze
         for i in range(per):
             self.log(f"🌀 جاري تصميم المتاهة {i+1}...")
             g = PuzzleEngine.maze(); self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(1); self.pdf.cell(0, 1, f"Maze #{i+1}", align="C")
@@ -256,7 +257,6 @@ class ProductionEngine:
                     if g[y][x]['S']: self.pdf.line(sx+x*cs, sy+(y+1)*cs, sx+(x+1)*cs, sy+(y+1)*cs)
                     if g[y][x]['E']: self.pdf.line(sx+(x+1)*cs, sy+y*cs, sx+(x+1)*cs, sy+(y+1)*cs)
                     if g[y][x]['W']: self.pdf.line(sx+x*cs, sy+y*cs, sx+x*cs, sy+(y+1)*cs)
-        # Word Search
         for i in range(per):
             self.log(f"🔍 جاري إخفاء الكلمات {i+1}...")
             grid, words = PuzzleEngine.word_search(theme)
@@ -286,6 +286,11 @@ class ProductionEngine:
                 self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=1.5, w=6.5, h=7.5); os.remove("t.jpg")
                 self.pdf.add_page()
                 s += 1
+                
+    def _lined_mode(self, count):
+        for i in range(count):
+            self.log(f"📏 جاري تسطير الصفحة {i+1}...")
+            self.pdf.add_lined_page()
 
 # ------------------------------------------------------------------------------
 # 8. واجهة التحكم والتشغيل (UI & Auto Mode)
@@ -303,7 +308,10 @@ def main():
     if check_auto():
         st.warning("🤖 النظام الآلي يعمل في الخلفية بصمت...")
         if API_KEYS[0] == "DUMMY": st.stop()
-        theme = GeminiEngine.ask("Suggest ONE highly profitable, low-competition KDP niche phrase for kids (e.g. Space Dinosaurs).").strip()
+        
+        strict_prompt = "Output ONLY a 2 to 4 words highly profitable KDP niche for kids activity book. Examples: Space Dogs, Ninja Cats. DO NOT write explanations. JUST THE WORDS."
+        theme = GeminiEngine.ask(strict_prompt).replace('\n', ' ').replace('*', '').strip()[:40]
+        
         eng = ProductionEngine({'theme':theme, 'pages':30, 'mode':'منوع'}, lambda x: print(x))
         f, meta = eng.run()
         if TELEGRAM_TOKEN:
@@ -315,7 +323,7 @@ def main():
     # ==========================================
     # الواجهة التفاعلية (للاستخدام اليدوي)
     # ==========================================
-    st.markdown('<h1 class="main-title">📚 KDP Factory Pro V17 👑</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">📚 KDP Factory Pro V18 👑</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align:center; color:#888; font-weight:bold;">صُنع بواسطة Irwin Smith</p>', unsafe_allow_html=True)
     
     tabs = st.tabs(["⚡ الطور السريع", "💡 طور العبقري", "⚙️ الإعدادات"])
@@ -327,7 +335,7 @@ def main():
             u_theme = st.text_input("🎯 موضوع الكتاب (Niche):", "Ocean Animals")
             u_pages = st.slider("📄 عدد الصفحات:", 12, 100, 24)
         with c2:
-            modes = ["تلوين فقط", "ألغاز منوعة", "قصص ورسومات", "تعليم (A-Z)", "كوميكس فقط", "وصل النقاط", "منوع"]
+            modes = ["تلوين فقط", "ألغاز منوعة", "قصص ورسومات", "تعليم (A-Z)", "كوميكس فقط", "وصل النقاط", "ملاحظات مسطرة", "منوع"]
             u_mode = st.selectbox("🎭 النوع التنسيقي:", modes)
         
         if st.button("🚀 ابدأ الإنتاج السريع", key="btn_fast", use_container_width=True):
@@ -370,4 +378,3 @@ def run_production(t, p, m):
 
 if __name__ == "__main__":
     main()
-
