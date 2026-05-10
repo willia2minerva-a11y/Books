@@ -1,7 +1,7 @@
 """
-KDP Factory Pro - The Ultimate Masterpiece (V15.0)
-Architect: Irwin Smith | Advanced Dev: AI
-Description: Fully Automated KDP Book Generator with Facing Pages & Dynamic Compensation
+KDP Factory Pro - The Ultimate Titan V17.0
+Architect & Creator: Irwin Smith | AI Logic: Elite Shield
+Features: 100% Automated Background Mode, UI Tabs, Facing Pages, Full Puzzle Engine
 """
 
 import streamlit as st
@@ -13,30 +13,37 @@ import random
 import time
 import traceback
 import string
-from datetime import datetime
 
 # ------------------------------------------------------------------------------
-# UI Configuration & Custom CSS
+# 1. منع انهيار الجلسة (Session Fix)
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="KDP Factory Pro V15", page_icon="👑", layout="wide")
+if 'init' not in st.session_state:
+    st.session_state.init = True
+
+# ------------------------------------------------------------------------------
+# 2. إعدادات الواجهة و CSS العربي
+# ------------------------------------------------------------------------------
+st.set_page_config(page_title="KDP Factory Pro", page_icon="👑", layout="wide")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800;900&display=swap');
-    * { font-family: 'Poppins', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+    * { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
     .main-title {
         background: linear-gradient(120deg, #ff6b6b, #4ecdc4);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 48px; font-weight: 900; text-align: center; margin: 0; padding-bottom: 10px;
+        font-size: 45px; font-weight: 900; text-align: center; margin: 0;
     }
-    .status-card { background: #ffffff; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 8px solid #764ba2; }
-    .stButton > button { background: linear-gradient(90deg, #667eea, #764ba2); color: white; border-radius: 30px; font-weight: bold; padding: 10px 20px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 20px; justify-content: center; }
+    .stTabs [data-baseweb="tab"] { background-color: #f0f2f6; border-radius: 10px; padding: 10px 20px; }
+    .stTabs [aria-selected="true"] { background-color: #667eea; color: white; }
+    input, textarea { text-align: left !important; direction: ltr !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# Environment & API Management
+# 3. جلب المفاتيح والإعدادات
 # ------------------------------------------------------------------------------
 def get_api_keys():
     keys = [os.getenv(f"GEMINI_API_KEY_{i}") for i in range(1, 4)]
@@ -47,14 +54,14 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ------------------------------------------------------------------------------
-# AI Engines (Gemini & Pollinations)
+# 4. محرك الذكاء الاصطناعي والصور
 # ------------------------------------------------------------------------------
 class GeminiEngine:
     MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
     
     @classmethod
     def ask(cls, prompt):
-        if API_KEYS[0] == "DUMMY": return cls._fallback(prompt)
+        if API_KEYS[0] == "DUMMY": return "A magical journey begins!||He saw a big star."
         for key in API_KEYS:
             genai.configure(api_key=key)
             for m_name in cls.MODELS:
@@ -62,37 +69,29 @@ class GeminiEngine:
                     res = genai.GenerativeModel(m_name).generate_content(prompt)
                     if res.text: return res.text.strip()
                 except: continue
-        return cls._fallback(prompt)
-        
-    @classmethod
-    def _fallback(cls, prompt):
-        p = prompt.lower()
-        if "story" in p: return "A magical journey begins!||He saw a big star.||The hero smiled."
-        if "niche" in p: return "Space Dinosaurs"
-        if "words" in p: return "SUN,MOON,STAR,SKY,SPACE,HERO"
-        return "Generic response due to API timeout."
+        return "Default adventure content due to timeout."
 
 class ImageGenerator:
     @staticmethod
     def generate(prompt, filename, style="coloring"):
         styles = {
-            "coloring": "bold black and white line art, thick clean outlines, pure white background, coloring book style, NO shading, NO gray",
-            "dots": "simple dot-to-dot puzzle for kids, numbered dots forming a shape, black and white, white background",
-            "cover": "vibrant colorful children's book cover, high resolution, professional cartoon style, NO text, NO words"
+            "coloring": "bold black and white line art, thick outlines, white background, coloring book style, NO shading",
+            "dots": "dot-to-dot puzzle for kids, simple numbered dots, black and white, white background",
+            "cover": "vibrant colorful children's book cover, high resolution, professional, NO text, NO words"
         }
         full_p = f"{styles.get(style, styles['coloring'])}, {prompt}"
         for _ in range(3):
             try:
                 url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(full_p)}?width=1024&height=1024&nologo=true&seed={random.randint(1,99999)}"
                 resp = requests.get(url, timeout=20)
-                if resp.status_code == 200 and len(resp.content) > 18000: # Ensure image isn't a tiny error page
+                if resp.status_code == 200 and len(resp.content) > 18000:
                     with open(filename, "wb") as f: f.write(resp.content)
                     return True
             except: time.sleep(1)
         return False
 
 # ------------------------------------------------------------------------------
-# Puzzle Logic Engine (Pure Python)
+# 5. محرك الألغاز (Pure Python)
 # ------------------------------------------------------------------------------
 class PuzzleEngine:
     @staticmethod
@@ -132,14 +131,13 @@ class PuzzleEngine:
             if len(words) < 6: words = ["HERO", "MAGIC", "POWER", "SECRET", "BRAVE", "QUEST"]
         except: words = ["HERO", "MAGIC", "POWER", "SECRET", "BRAVE", "QUEST"]
 
-        size = 10
-        grid = [[' ' for _ in range(size)] for _ in range(size)]
+        size = 10; grid = [[' ' for _ in range(size)] for _ in range(size)]
         for w in words:
             for _ in range(50):
-                direction = random.choice([(0,1), (1,0)])
-                r, c = random.randint(0, size - 1 - (len(w)-1)*direction[0]), random.randint(0, size - 1 - (len(w)-1)*direction[1])
-                if all(grid[r+i*direction[0]][c+i*direction[1]] in (' ', w[i]) for i in range(len(w))):
-                    for i in range(len(w)): grid[r+i*direction[0]][c+i*direction[1]] = w[i]
+                d = random.choice([(0,1), (1,0)])
+                r, c = random.randint(0, size - 1 - (len(w)-1)*d[0]), random.randint(0, size - 1 - (len(w)-1)*d[1])
+                if all(grid[r+i*d[0]][c+i*d[1]] in (' ', w[i]) for i in range(len(w))):
+                    for i in range(len(w)): grid[r+i*d[0]][c+i*d[1]] = w[i]
                     break
         for r in range(size):
             for c in range(size):
@@ -147,7 +145,7 @@ class PuzzleEngine:
         return grid, words
 
 # ------------------------------------------------------------------------------
-# PDF Builder (KDP Formatted)
+# 6. صانع الكتاب (KDP Formatter)
 # ------------------------------------------------------------------------------
 class KDPBook(FPDF):
     def __init__(self):
@@ -155,164 +153,142 @@ class KDPBook(FPDF):
         self.set_auto_page_break(False)
         self.set_margins(0.875, 0.5, 0.75) # Gutter margin included
 
-    def add_title(self, text, y=0.8, size=24):
-        self.set_font("Arial", "B", size)
-        self.set_y(y)
-        self.cell(0, 0.5, text, align="C", ln=True)
+    def add_lined_page(self):
+        self.add_page(); self.set_draw_color(200, 200, 200)
+        for i in range(2, 10): self.line(1, i, 7.5, i)
 
 # ------------------------------------------------------------------------------
-# Main Production Engine
+# 7. محرك الإنتاج الشامل
 # ------------------------------------------------------------------------------
-class RoyalProductionEngine:
-    def __init__(self, config, ui_status, ui_progress):
+class ProductionEngine:
+    def __init__(self, config, log_func):
         self.config = config
-        self.status = ui_status
-        self.progress = ui_progress
+        self.log = log_func
         self.pdf = KDPBook()
 
     def run(self):
         t, p, m = self.config['theme'], self.config['pages'], self.config['mode']
         
-        # 1. Cover Generation
-        self.status.info(f"🎨 Designing professional KDP cover for '{t}'...")
-        if ImageGenerator.generate(f"happy {t} characters, beautiful children's book", "c.jpg", "cover"):
+        self.log(f"🎨 جاري إنشاء الغلاف الاحترافي لـ {t}...")
+        if ImageGenerator.generate(f"happy {t} kids illustration", "c.jpg", "cover"):
             self.pdf.add_page(); self.pdf.image("c.jpg", x=0, y=0, w=8.5, h=11); os.remove("c.jpg")
         
-        # Title Page
         self.pdf.add_page(); self.pdf.set_font("Arial", "B", 36); self.pdf.set_y(4)
-        self.pdf.cell(0, 1, f"THE BIG BOOK OF", align="C", ln=True)
+        self.pdf.cell(0, 1, "THE BIG BOOK OF", align="C", ln=True)
         self.pdf.cell(0, 1, t.upper(), align="C", ln=True)
 
-        # 2. Content Generation
-        if m == "Story & Coloring": self._story_coloring(p, t)
-        elif m == "Educational (A-Z)": self._alphabet(p)
-        elif m == "Dot-to-Dot": self._dot_to_dot(p, t)
-        elif m == "Coloring Only": self._coloring_only(p, t)
-        elif m == "Puzzles (Mixed)": self._puzzles(p, t)
-        elif m == "Comics": self._comics(p, t)
-        else: self._mixed_mode(p, t)
+        # التوزيع حسب النوع
+        if m == "تلوين فقط": self._coloring_mode(p, t)
+        elif m == "قصص ورسومات": self._story_mode(p, t)
+        elif m == "ألغاز منوعة": self._puzzles_mode(p, t)
+        elif m == "تعليم (A-Z)": self._alphabet_mode(p)
+        elif m == "كوميكس فقط": self._comics_mode(p, t)
+        elif m == "وصل النقاط": self._dots_mode(p, t)
+        else: # منوع
+            part = max(1, p // 3)
+            self._coloring_mode(part, t)
+            self._puzzles_mode(part, t)
+            self._comics_mode(part, t)
 
-        # 3. Export & SEO
-        fname = f"KDP_Royal_{t.replace(' ', '_')}_{int(time.time())}.pdf"
+        fname = f"KDP_{t.replace(' ', '_')}_{int(time.time())}.pdf"
         self.pdf.output(fname)
-        self.status.info("📝 Writing Amazon KDP SEO Listing...")
-        meta = GeminiEngine.ask(f"Act as Amazon KDP expert. Write converting listing for '{t}' kids activity book (Type: {m}). Include: Catchy Title, Subtitle, 7 Backend Search Keywords (comma separated), and a short persuasive Description with bullet points.")
+        meta = GeminiEngine.ask(f"Write KDP SEO listing for {t} book. Title, Subtitle, 7 Keywords, Description with bullets.")
         return fname, meta
 
-    def _story_coloring(self, count, theme):
-        raw = GeminiEngine.ask(f"Write a {count} part exciting story about {theme}. Each part 2 short sentences. Split with '||'.")
+    def _coloring_mode(self, count, theme):
+        items = GeminiEngine.ask(f"List {count+10} simple coloring items for {theme}. One per line.").split('\n')
+        success = 0
+        for item in items:
+            if success >= count: break
+            if len(item.strip()) < 3: continue
+            self.log(f"🖌️ جاري رسم المشهد {success+1}: {item.strip()}...")
+            if ImageGenerator.generate(f"cute {item.strip()}", "t.jpg"):
+                self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=1.5, w=6.5, h=6.5)
+                self.pdf.add_page(); os.remove("t.jpg"); success += 1 # صفحة حماية
+
+    def _story_mode(self, count, theme):
+        raw = GeminiEngine.ask(f"Write {count} part exciting story about {theme}. Part=2 sentences. Split '||'.")
         parts = [p.strip() for p in raw.split('||')][:count]
         for i, text in enumerate(parts):
-            self.status.write(f"📖 Generating Story/Coloring Pair {i+1}/{count}...")
-            # Left Page: Story
-            self.pdf.add_page(); self.pdf.set_font("Arial", "I", 22); self.pdf.set_y(4)
-            self.pdf.multi_cell(0, 0.5, text, align="C")
-            # Right Page: Coloring
-            if ImageGenerator.generate(f"scene of {text[:50]}", "t.jpg"):
+            self.log(f"📖 جاري إنشاء الجزء القصصي {i+1}...")
+            # صفحة القصة
+            self.pdf.add_page(); self.pdf.set_font("Arial", "I", 22); self.pdf.set_y(4); self.pdf.multi_cell(0, 0.5, text, align="C")
+            # صفحة التلوين المقابلة
+            if ImageGenerator.generate(f"scene for {text[:40]}", "t.jpg"):
                 self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=2, w=6.5, h=6.5); os.remove("t.jpg")
             else: self.pdf.add_page()
-            self.pdf.add_page() # Blank back to protect colors
-            self.progress((i+1)/count)
+            self.pdf.add_page() # حماية اللون
 
-    def _alphabet(self, count):
-        letters = list(string.ascii_uppercase)[:min(count, 26)]
-        for i, L in enumerate(letters):
-            self.status.write(f"✏️ Designing Letter '{L}' Pair...")
-            # Left Page: Trace
-            self.pdf.add_page(); self.pdf.set_font("Arial", "B", 120); self.pdf.set_y(2)
-            self.pdf.cell(0, 1.5, L, align="C", ln=True)
-            self.pdf.set_font("Arial", "", 24); self.pdf.cell(0, 1, f"Practice Writing {L}", align="C")
-            # Right Page: Color
-            item = GeminiEngine.ask(f"One simple word starting with {L} for kids coloring. Just the word.").strip()
+    def _alphabet_mode(self, count):
+        L = list(string.ascii_uppercase)[:min(count, 26)]
+        for i, char in enumerate(L):
+            self.log(f"✏️ جاري إعداد وتصميم الحرف {char}...")
+            self.pdf.add_page(); self.pdf.set_font("Arial", "B", 120); self.pdf.set_y(2); self.pdf.cell(0, 1.5, char, align="C", ln=True)
+            self.pdf.set_font("Arial", "", 24); self.pdf.cell(0, 1, f"Practice Writing {char}", align="C")
+            item = GeminiEngine.ask(f"One simple word starting with {char} for kids coloring. Just the word.").strip()
             if ImageGenerator.generate(f"a cute {item}", "t.jpg"):
-                self.pdf.add_page(); self.pdf.add_title(f"{L} is for {item.upper()}", 1.0, 30)
+                self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(1)
+                self.pdf.cell(0, 1, f"{char} is for {item.upper()}", align="C")
                 self.pdf.image("t.jpg", x=1.5, y=2.5, w=5.5, h=5.5); os.remove("t.jpg")
             else: self.pdf.add_page()
-            self.pdf.add_page() # Blank back
-            self.progress((i+1)/len(letters))
+            self.pdf.add_page()
 
-    def _dot_to_dot(self, count, theme):
-        items = GeminiEngine.ask(f"Give {count+10} simple items related to {theme}. One per line.").split('\n')
-        success = 0
-        for item in items:
-            if success >= count: break
-            if not item.strip(): continue
-            self.status.write(f"📍 Drawing Dot-to-Dot Puzzle {success+1}/{count}...")
-            if ImageGenerator.generate(f"dot-to-dot puzzle of {item.strip()}", "t.jpg", "dots"):
-                # Left Page: Drawing space
-                self.pdf.add_page(); self.pdf.add_title("Draw Your Own Here!", 4.0)
-                # Right Page: Dot Puzzle
-                self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=1.5, w=6.5, h=7.5); os.remove("t.jpg")
-                self.pdf.add_page() # Blank back
-                success += 1
-                self.progress(success/count)
-
-    def _coloring_only(self, count, theme):
-        items = GeminiEngine.ask(f"Give {count+10} simple items related to {theme} for kids coloring. One per line.").split('\n')
-        success = 0
-        for item in items:
-            if success >= count: break
-            if not item.strip(): continue
-            self.status.write(f"🖌️ Drawing Coloring Page {success+1}/{count}...")
-            if ImageGenerator.generate(f"a cute {item.strip()}", "t.jpg"):
-                self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=1.5, w=6.5, h=6.5); os.remove("t.jpg")
-                self.pdf.add_page() # Blank back
-                success += 1
-                self.progress(success/count)
-
-    def _puzzles(self, count, theme):
-        per_type = max(1, count // 3)
-        # 1. Sudoku
-        for i in range(per_type):
-            self.status.write(f"🧩 Generating Sudoku {i+1}...")
-            board = PuzzleEngine.sudoku(); self.pdf.add_page(); self.pdf.add_title(f"Sudoku Challenge #{i+1}")
+    def _puzzles_mode(self, count, theme):
+        per = max(1, count // 3)
+        # Sudoku
+        for i in range(per):
+            self.log(f"🧩 جاري بناء سودوكو {i+1}...")
+            b = PuzzleEngine.sudoku(); self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(1); self.pdf.cell(0, 1, f"Sudoku #{i+1}", align="C")
             sx, sy, cs = 1.25, 2.5, 0.66
             for r in range(9):
                 for c in range(9):
                     self.pdf.set_line_width(0.05 if (r%3==0 or c%3==0) else 0.01)
                     self.pdf.rect(sx+c*cs, sy+r*cs, cs, cs)
-                    if board[r][c] != 0: self.pdf.set_font("Arial", "B", 20); self.pdf.text(sx+c*cs+0.25, sy+r*cs+0.45, str(board[r][c]))
-        # 2. Maze
-        for i in range(per_type):
-            self.status.write(f"🌀 Building Maze {i+1}...")
-            g = PuzzleEngine.maze(); self.pdf.add_page(); self.pdf.add_title(f"Maze Adventure #{i+1}")
+                    if b[r][c] != 0: self.pdf.set_font("Arial", "B", 20); self.pdf.text(sx+c*cs+0.25, sy+r*cs+0.45, str(b[r][c]))
+        # Maze
+        for i in range(per):
+            self.log(f"🌀 جاري تصميم المتاهة {i+1}...")
+            g = PuzzleEngine.maze(); self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(1); self.pdf.cell(0, 1, f"Maze #{i+1}", align="C")
             sx, sy, cs = 1.8, 2.5, 0.4; self.pdf.set_line_width(0.04)
             for y in range(12):
                 for x in range(12):
-                    px, py = sx+x*cs, sy+y*cs
-                    if g[y][x]['N']: self.pdf.line(px, py, px+cs, py)
-                    if g[y][x]['S']: self.pdf.line(px, py+cs, px+cs, py+cs)
-                    if g[y][x]['E']: self.pdf.line(px+cs, py, px+cs, py+cs)
-                    if g[y][x]['W']: self.pdf.line(px, py, px, py+cs)
-        # 3. Word Search
-        for i in range(per_type):
-            self.status.write(f"🔍 Creating Word Search {i+1}...")
+                    if g[y][x]['N']: self.pdf.line(sx+x*cs, sy+y*cs, sx+(x+1)*cs, sy+y*cs)
+                    if g[y][x]['S']: self.pdf.line(sx+x*cs, sy+(y+1)*cs, sx+(x+1)*cs, sy+(y+1)*cs)
+                    if g[y][x]['E']: self.pdf.line(sx+(x+1)*cs, sy+y*cs, sx+(x+1)*cs, sy+(y+1)*cs)
+                    if g[y][x]['W']: self.pdf.line(sx+x*cs, sy+y*cs, sx+x*cs, sy+(y+1)*cs)
+        # Word Search
+        for i in range(per):
+            self.log(f"🔍 جاري إخفاء الكلمات {i+1}...")
             grid, words = PuzzleEngine.word_search(theme)
-            self.pdf.add_page(); self.pdf.add_title(f"Word Search #{i+1}"); self.pdf.set_font("Arial", "B", 24)
+            self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(1); self.pdf.cell(0, 1, f"Word Search #{i+1}", align="C")
             sx, sy, cs = 1.75, 2.5, 0.5
             for r in range(10):
                 for c in range(10): self.pdf.text(sx + c*cs, sy + r*cs, grid[r][c])
             self.pdf.set_font("Arial", "", 16); self.pdf.set_y(8.0)
-            self.pdf.cell(0, 0.5, "Find these words:", align="C", ln=True)
-            self.pdf.cell(0, 0.5, " - ".join(words), align="C", ln=True)
-        self.progress(1.0)
+            self.pdf.cell(0, 0.5, "Find: " + " - ".join(words), align="C")
 
-    def _comics(self, count, theme):
+    def _comics_mode(self, count, theme):
         for i in range(count):
-            self.status.write(f"🦸 Drawing Comic Panels {i+1}/{count}...")
-            self.pdf.add_page(); self.pdf.add_title(f"Draw Your {theme} Comic!")
+            self.log(f"🦸 جاري تسطير الكوميكس {i+1}...")
+            self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(0.8); self.pdf.cell(0, 1, f"Draw Your {theme} Comic", align="C")
             self.pdf.set_line_width(0.04)
-            # Layout
-            self.pdf.rect(0.75, 1.5, 3.4, 4); self.pdf.rect(4.35, 1.5, 3.4, 4)
-            self.pdf.rect(0.75, 5.7, 7, 4.5)
-            self.progress((i+1)/count)
+            self.pdf.rect(0.75, 1.8, 3.4, 4); self.pdf.rect(4.35, 1.8, 3.4, 4); self.pdf.rect(0.75, 6.0, 7, 4.2)
 
-    def _mixed_mode(self, count, theme):
-        self._coloring_only(count//4, theme)
-        self._puzzles(count//4 * 3, theme) # Mix of puzzles fills the rest
+    def _dots_mode(self, count, theme):
+        items = GeminiEngine.ask(f"Give {count+10} items related to {theme}. One per line.").split('\n')
+        s = 0
+        for item in items:
+            if s >= count: break
+            if len(item.strip()) < 3: continue
+            self.log(f"📍 جاري رسم لغز النقاط {s+1}...")
+            if ImageGenerator.generate(f"dot-to-dot puzzle of {item.strip()}", "t.jpg", "dots"):
+                self.pdf.add_page(); self.pdf.set_font("Arial", "B", 24); self.pdf.set_y(4); self.pdf.cell(0, 1, "Draw Freehand Here", align="C")
+                self.pdf.add_page(); self.pdf.image("t.jpg", x=1, y=1.5, w=6.5, h=7.5); os.remove("t.jpg")
+                self.pdf.add_page()
+                s += 1
 
 # ------------------------------------------------------------------------------
-# System & UI Logic
+# 8. واجهة التحكم والتشغيل (UI & Auto Mode)
 # ------------------------------------------------------------------------------
 def check_auto():
     try:
@@ -321,51 +297,76 @@ def check_auto():
     except: return False
 
 def main():
+    # ==========================================
+    # الطور الآلي (الخفي) - يعمل بدون أي تدخل
+    # ==========================================
     if check_auto():
-        st.warning("🤖 Auto-Pilot Mode is running in the background...")
-        theme = GeminiEngine.ask("Suggest ONE highly profitable, low-competition KDP niche phrase for kids.").strip()
-        eng = RoyalProductionEngine({'theme':theme, 'pages':20, 'mode':'Story & Coloring'}, st.empty(), lambda x: None)
-        f, m = eng.run()
+        st.warning("🤖 النظام الآلي يعمل في الخلفية بصمت...")
+        if API_KEYS[0] == "DUMMY": st.stop()
+        theme = GeminiEngine.ask("Suggest ONE highly profitable, low-competition KDP niche phrase for kids (e.g. Space Dinosaurs).").strip()
+        eng = ProductionEngine({'theme':theme, 'pages':30, 'mode':'منوع'}, lambda x: print(x))
+        f, meta = eng.run()
         if TELEGRAM_TOKEN:
-            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ Auto-Generated: {theme}"}, files={"document": open(f, "rb")})
-            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": m})
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ كتاب آلي جديد: {theme}"}, files={"document": open(f, "rb")})
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": meta})
+        st.success("تم الإرسال!")
         return
 
-    st.markdown('<h1 class="main-title">📚 KDP Factory Pro V15 👑</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align:center; color:#888;">The Ultimate AI-Powered Publishing Agency</p>', unsafe_allow_html=True)
+    # ==========================================
+    # الواجهة التفاعلية (للاستخدام اليدوي)
+    # ==========================================
+    st.markdown('<h1 class="main-title">📚 KDP Factory Pro V17 👑</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align:center; color:#888; font-weight:bold;">صُنع بواسطة Irwin Smith</p>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        u_theme = st.text_input("🎯 Target Niche / Theme:", "Space Explorers")
-        u_pages = st.slider("📄 Number of Pages/Pairs:", 10, 100, 20)
-    with col2:
-        modes = ["Story & Coloring", "Coloring Only", "Puzzles (Mixed)", "Educational (A-Z)", "Dot-to-Dot", "Comics", "Everything (Mixed)"]
-        u_mode = st.selectbox("🎭 Book Format & Type:", modes)
+    tabs = st.tabs(["⚡ الطور السريع", "💡 طور العبقري", "⚙️ الإعدادات"])
 
-    if st.button("🚀 Start Royal Production", use_container_width=True):
-        if API_KEYS[0] == "DUMMY":
-            st.warning("⚠️ Warning: Running in Fallback Mode. Please add GEMINI_API_KEY_1 in Render settings for AI text.")
-            
-        status_c = st.container()
-        with status_c:
-            s_msg = st.empty()
-            p_bar = st.progress(0)
-            try:
-                engine = RoyalProductionEngine({'theme':u_theme, 'pages':u_pages, 'mode':u_mode}, s_msg, p_bar.progress)
-                file, meta = engine.run()
-                
-                st.success("🎉 Your KDP Book is Ready!")
-                st.info(f"**Amazon KDP SEO Metadata:**\n\n{meta}")
-                
-                with open(file, "rb") as f: 
-                    st.download_button("⬇️ Download PDF Book", f, file_name=file, use_container_width=True)
-                    
-                if TELEGRAM_TOKEN:
-                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ Your book '{u_theme}' is ready for KDP!"}, files={"document": open(file, "rb")})
-                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": meta})
-            except Exception as e:
-                st.error(f"❌ A critical error occurred: {e}")
-                st.code(traceback.format_exc())
+    with tabs[0]:
+        st.info("اختر نوع الكتاب وعدد الصفحات، وسيقوم النظام بتوليده فوراً.")
+        c1, c2 = st.columns(2)
+        with c1:
+            u_theme = st.text_input("🎯 موضوع الكتاب (Niche):", "Ocean Animals")
+            u_pages = st.slider("📄 عدد الصفحات:", 12, 100, 24)
+        with c2:
+            modes = ["تلوين فقط", "ألغاز منوعة", "قصص ورسومات", "تعليم (A-Z)", "كوميكس فقط", "وصل النقاط", "منوع"]
+            u_mode = st.selectbox("🎭 النوع التنسيقي:", modes)
+        
+        if st.button("🚀 ابدأ الإنتاج السريع", key="btn_fast", use_container_width=True):
+            run_production(u_theme, u_pages, u_mode)
+
+    with tabs[1]:
+        st.info("اكتب فكرتك بحرية وسيقوم الذكاء الاصطناعي بتخطيط الكتاب لك بأفضل طريقة لـ KDP.")
+        o_theme = st.text_input("🎯 الموضوع الأساسي (Theme):", placeholder="مثال: قطط النينجا في الفضاء...")
+        o_desc = st.text_area("📝 وصف الفكرة بالتفصيل:", placeholder="مثال: أريد قصة تفاعلية مضحكة مع الكثير من المتاهات...")
+        o_pages = st.number_input("📄 عدد الصفحات المطلوب:", 12, 120, 30)
+        
+        if st.button("🪄 نفذ فكرتي العبقرية", key="btn_open", use_container_width=True):
+            with st.spinner("جاري تحليل فكرتك وتخطيط الكتاب..."):
+                plan = GeminiEngine.ask(f"User idea: {o_theme}. Details: {o_desc}. Suggest the best KDP activity book type from this list: [قصص ورسومات, منوع, ألغاز منوعة]. Output ONLY the exact Arabic name of the type.")
+                st.success(f"النوع الأمثل لفكرتك هو: {plan}")
+                run_production(o_theme, o_pages, plan if plan in ["قصص ورسومات", "منوع", "ألغاز منوعة"] else "منوع")
+
+    with tabs[2]:
+        st.markdown("### 🔑 إدارة حالة النظام")
+        st.write("يتم جلب المفاتيح تلقائياً من إعدادات Render.")
+        if API_KEYS[0] != "DUMMY": st.success("✅ Gemini متصل ومستقر")
+        else: st.error("⚠️ يرجى إضافة GEMINI_API_KEY_1")
+        if TELEGRAM_TOKEN: st.success("✅ Telegram متصل ومستعد للاستلام")
+
+def run_production(t, p, m):
+    status_c = st.container()
+    with status_c:
+        stat = st.empty()
+        try:
+            engine = ProductionEngine({'theme':t, 'pages':p, 'mode':m}, stat.info)
+            f, meta = engine.run()
+            stat.success("🎉 تم الإنتاج بنجاح!")
+            st.info(f"**SEO Info for Amazon:**\n\n{meta}")
+            with open(f, "rb") as b: st.download_button("⬇️ تحميل الكتاب (PDF)", b, file_name=f, use_container_width=True)
+            if TELEGRAM_TOKEN: 
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ كتاب {t} جاهز للرفع!"}, files={"document": open(f, "rb")})
+        except Exception as e: 
+            st.error(f"❌ حدث خطأ غير متوقع: {e}")
+            st.code(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
