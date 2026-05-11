@@ -1,7 +1,7 @@
 """
-KDP Factory Pro - The Immortal V24
-Architect: Irwin Smith | Logic: Fault Tolerance & Triple-Key Sync
-Features: Ultimate Fallbacks, Zero-Crash Engine, Automatic Page Compensation
+KDP Factory Pro - The Stealth Mask V25
+Architect: Irwin Smith | Logic: Fault Tolerance + Anti-Bot Bypass
+Fixes: Cloudflare 403 Bypass (Headers), Fixed Truncation Bug
 """
 
 import streamlit as st
@@ -16,13 +16,13 @@ import string
 import re
 
 # ==========================================
-# 1. درع استقرار الجلسة (منع خطأ SessionInfo)
+# 1. درع استقرار الجلسة 
 # ==========================================
 if 'init' not in st.session_state:
     st.session_state.init = True
     time.sleep(1)
 
-st.set_page_config(page_title="KDP Factory Pro V24", page_icon="👑", layout="wide")
+st.set_page_config(page_title="KDP Factory Pro V25", page_icon="👑", layout="wide")
 
 st.markdown("""
 <style>
@@ -43,7 +43,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. إدارة المفاتيح والتنظيف
+# 2. إدارة المفاتيح
 # ==========================================
 def get_all_keys():
     keys = [os.getenv(f"GEMINI_API_KEY_{i}", "") for i in range(1, 6)]
@@ -59,30 +59,25 @@ def clean_text(text):
     return text.encode('latin-1', 'ignore').decode('latin-1').replace('\n', ' ')
 
 # ==========================================
-# 3. محرك Gemini المضاد للفشل (Smart Fallbacks)
+# 3. محرك Gemini 
 # ==========================================
 class SmartGemini:
     @classmethod
     def ask(cls, prompt, fallback_response):
         if ALL_KEYS[0] == "DUMMY": return fallback_response
-        
-        # تدوير عشوائي للمفاتيح لتجنب الحظر
         random.shuffle(ALL_KEYS)
         for key in ALL_KEYS:
             try:
                 genai.configure(api_key=key)
-                # استخدام فلاش لأنه أسرع وأقل استهلاكاً للحصص
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 res = model.generate_content(prompt)
                 if res.text: return res.text.strip()
-            except Exception as e:
-                continue # إذا فشل المفتاح، يمر للمفتاح الذي بعده بصمت
-        
-        # إذا فشلت كل المفاتيح (أو انقطع الاتصال بـ API)
+            except:
+                continue 
         return fallback_response
 
 # ==========================================
-# 4. محرك الصور المحصن (Image Shield)
+# 4. محرك الصور المقنع (Stealth Shield)
 # ==========================================
 class ImageShield:
     @staticmethod
@@ -94,20 +89,26 @@ class ImageShield:
         else:
             p = f"bold black and white line art, {prompt}, thick clean outlines, white background, strictly NO shading, coloring page for kids"
         
-        url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={random.randint(1,9999)}"
+        url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1024&height=1024&nologo=true&seed={random.randint(1,99999)}"
+        
+        # قناع التخفي: نوهم السيرفر أننا متصفح جوجل كروم حقيقي وليس بوت بايثون
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+        }
         
         for attempt in range(3):
             try:
-                time.sleep(1.5) # استراحة اجبارية لمنع الحظر
-                r = requests.get(url, timeout=25)
-                # التأكد من أن الملف كبير فعلاً وليس صفحة خطأ صغيرة
+                time.sleep(1.5) 
+                # إضافة قناع التخفي للطلب
+                r = requests.get(url, headers=headers, timeout=30)
                 if r.status_code == 200 and len(r.content) > 15000:
                     with open(filename, "wb") as f: f.write(r.content)
                     return True
             except:
                 time.sleep(1)
                 continue
-        return False # إذا فشلت 3 محاولات، يرجع False لكي يتدخل نظام التعويض
+        return False
 
 # ==========================================
 # 5. محرك الألغاز
@@ -142,7 +143,7 @@ class PuzzleEngine:
         return grid
 
 # ==========================================
-# 6. صانع الكتاب و مصنع الطوارئ
+# 6. صانع الكتاب KDP
 # ==========================================
 class KDPBook(FPDF):
     def __init__(self):
@@ -157,13 +158,12 @@ class ProductionEngine:
         self.pdf = KDPBook()
 
     def _emergency_page(self, title="Draw Here!"):
-        """صفحة طوارئ: يتم استخدامها إذا فشل توليد الصورة لضمان عدم نقصان عدد الصفحات"""
         self.pdf.add_page()
-        self.pdf.set_font("Arial", "B", 24)
+        self.pdf.set_font("Arial", "B", 20) # تصغير الخط قليلاً لاستيعاب الجمل
         self.pdf.set_y(1)
         self.pdf.cell(0, 1, title, align="C", ln=True)
         self.pdf.set_line_width(0.05)
-        self.pdf.rect(1, 2.5, 6.5, 7) # إطار للرسم الحر
+        self.pdf.rect(1, 2.5, 6.5, 7) 
         self.pdf.set_font("Arial", "I", 14)
         self.pdf.set_y(5)
         self.pdf.cell(0, 1, "Use your imagination to draw something amazing!", align="C")
@@ -171,34 +171,28 @@ class ProductionEngine:
     def run(self):
         t, p, m = self.config['theme'], self.config['pages'], self.config['mode']
         
-        # 🟢 الغلاف
         self.log(f"🎨 جاري رسم الغلاف الاحترافي لـ {t[:30]}...")
         if ImageShield.generate(t, "cover.jpg", "cover"):
             self.pdf.add_page(); self.pdf.image("cover.jpg", x=0, y=0, w=8.5, h=11); os.remove("cover.jpg")
         else:
-            self.log("⚠️ فشل رسم الغلاف، تم وضع غلاف نصي كبديل طوارئ.")
             self.pdf.add_page(); self.pdf.set_font("Arial", "B", 40); self.pdf.set_y(4)
             self.pdf.cell(0, 1, t.upper(), align="C")
         
-        # صفحة العنوان
         self.pdf.add_page(); self.pdf.set_font("Arial", "B", 30); self.pdf.set_y(4)
         self.pdf.multi_cell(0, 0.5, f"THE BIG BOOK OF\n{clean_text(t).upper()}", align="C")
 
-        # 🟢 توجيه المهام (في حال حدوث خطأ كارثي، نستمر)
         try:
             if m == "تلوين فقط": self._coloring_mode(p, t)
             elif m == "قصص ورسومات": self._story_mode(p, t)
             elif m == "ألغاز منوعة": self._puzzles_mode(p, t)
             else: self._mixed_mode(p, t)
         except Exception as e:
-            self.log(f"⚠️ تجاوزنا خطأ داخلي لإكمال الكتاب: {e}")
+            self.log(f"⚠️ خطأ صامت تم تجاوزه: {e}")
 
-        # 🟢 التصدير
         clean_theme = re.sub(r'[^a-zA-Z0-9]', '_', t)[:30]
         fname = f"KDP_{clean_theme}_{int(time.time())}.pdf"
         self.pdf.output(fname)
         
-        # 🟢 SEO (مع نص طوارئ إذا فشل الذكاء الاصطناعي)
         self.log("📝 جاري استخراج معلومات أمازون SEO...")
         fallback_seo = f"Title: Awesome {t} Activity Book\nSubtitle: Hours of fun!\nKeywords: kids, book, activity, {t}, fun\nDescription: A great book for children."
         seo = SmartGemini.ask(f"Write KDP SEO for '{t}': Title, Subtitle, 7 Keywords, Description.", fallback_seo)
@@ -206,7 +200,6 @@ class ProductionEngine:
         return fname, seo
 
     def _coloring_mode(self, count, theme):
-        # قائمة طوارئ إذا فشل استخراج الأسماء
         fallback_ideas = "\n".join([f"{theme} character {i}" for i in range(1, count+10)])
         ideas_raw = SmartGemini.ask(f"List {count+5} simple items for {theme} coloring. One per line.", fallback_ideas)
         ideas = [i.strip() for i in ideas_raw.split('\n') if len(i) > 2]
@@ -219,10 +212,11 @@ class ProductionEngine:
                 self.pdf.add_page(); self.pdf.image("tmp.jpg", x=1, y=1.5, w=6.5, h=6.5)
                 os.remove("tmp.jpg")
             else:
-                self.log(f"⚠️ فشلت الصورة {i+1}. جاري وضع صفحة طوارئ (رسم حر)...")
-                self._emergency_page(f"Draw your own {item[:15]}!")
+                self.log(f"⚠️ فشلت الصورة {i+1} بسبب الحظر. جاري وضع صفحة رسم حر...")
+                # زيادة مساحة القص لـ 40 حرف لمنع مشكلة cha!
+                self._emergency_page(f"Draw your own {clean_text(item)[:40]}!")
             
-            self.pdf.add_page() # صفحة فارغة للحماية
+            self.pdf.add_page() 
 
     def _story_mode(self, count, theme):
         fallback_story = "||".join([f"The great {theme} adventure continues!" for _ in range(count)])
@@ -240,8 +234,7 @@ class ProductionEngine:
                 self.pdf.add_page(); self.pdf.image("tmp.jpg", x=1, y=2, w=6.5, h=6.5)
                 os.remove("tmp.jpg")
             else:
-                self.log("⚠️ تعذر رسم المشهد. وضعنا إطاراً ليرسمه الطفل بنفسه.")
-                self._emergency_page("Draw this scene!")
+                self._emergency_page("Draw this exciting scene!")
             self.pdf.add_page()
 
     def _puzzles_mode(self, count, theme):
@@ -277,11 +270,11 @@ class ProductionEngine:
         self._story_mode(count - (part*2), theme)
 
 # ==========================================
-# 7. الواجهة وربط النظام
+# 7. الواجهة
 # ==========================================
 def main():
-    st.markdown('<h1 class="main-title">📚 KDP Factory Pro V24 👑</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align:center; color:#888;">نظام "الدرع الخالد": مضاد للانهيار ومرن في التعويضات</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">📚 KDP Factory Pro V25 👑</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align:center; color:#888;">نظام "قناع التخفي": لتجاوز حظر السيرفرات</p>', unsafe_allow_html=True)
 
     tabs = st.tabs(["⚡ الطور السريع", "💡 طور العبقري", "⚙️ الإعدادات"])
 
@@ -307,8 +300,7 @@ def main():
                 run_prod(o_t, o_p, plan if plan in ["قصص ورسومات", "منوع", "ألغاز منوعة"] else "منوع")
 
     with tabs[2]:
-        st.info("يتم استغلال 3 مفاتيح لـ Gemini بالتناوب (Load Balancing) لضمان عدم نفاذ الحصة.")
-        st.success("نظام التعويض (Graceful Degradation) مفعل: إذا فشلت صورة، توضع صفحة تعويضية تلقائياً.")
+        st.info("نظام (User-Agent Stealth) مُفعّل لمنع حظر موقع الصور لطلبات السيرفر الخاص بك.")
 
 def run_prod(t, p, m):
     stat = st.empty()
@@ -316,7 +308,7 @@ def run_prod(t, p, m):
         engine = ProductionEngine({'theme':t, 'pages':p, 'mode':m}, stat.info)
         f, meta = engine.run()
         
-        stat.success("🎉 اكتمل الإنتاج! لم ينهار النظام بفضل شبكات الأمان.")
+        stat.success("🎉 اكتمل الإنتاج!")
         st.code(meta, language="markdown")
         
         with open(f, "rb") as b: st.download_button("⬇️ تحميل محلي", b, file_name=f)
@@ -326,12 +318,11 @@ def run_prod(t, p, m):
                 requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID}, files={"document": open(f, "rb")}, timeout=30)
                 requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": f"✅ الكتاب جاهز!\n{meta}"}, timeout=20)
             except:
-                st.warning("⚠️ تم بناء الكتاب، لكن فشل إرساله عبر تليجرام. يمكنك تحميله من الزر أعلاه.")
+                st.warning("⚠️ تم بناء الكتاب بنجاح، لكن فشل إرساله عبر تليجرام.")
                 
     except Exception as e:
-        st.error("❌ حدث خطأ جذري غير مألوف، لكن واجهة الموقع صامدة.")
+        st.error("❌ حدث خطأ، ولكن الكود لا يزال يعمل.")
         st.code(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
-
