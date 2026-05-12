@@ -1,7 +1,7 @@
 """
-KDP Factory Pro - The Digital Empire V30.1
-Architect & CEO: Walid Zaki | Logic: Mass Digital Asset Factory
-Features: ZIP Export, TikTok Scripts, Open Mode, Safe Indentation
+KDP Factory Pro - Mobile-First & Telegram Optimized V31.0
+Architect & CEO: Walid Zaki | Logic: Responsive UI, Dual Telegram Delivery
+Features: Mobile Layout, PDF+Text Telegram, Bestseller AI, Hyper-Bot
 """
 
 import streamlit as st
@@ -27,25 +27,30 @@ if 'init' not in st.session_state:
     st.session_state.init = True
     time.sleep(1)
 
-st.set_page_config(page_title="KDP Empire V30", page_icon="🏭", layout="wide")
+st.set_page_config(page_title="KDP Empire V31", page_icon="📱", layout="centered")
 
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     * { font-family: 'Cairo', sans-serif; }
     p, h1, h2, h3, h4, h5, h6, label, .stMarkdown, li { direction: rtl; text-align: right; }
+    
+    /* جعل العنوان الرئيسي متجاوباً مع الهواتف */
     .main-title {
         background: linear-gradient(90deg, #1CB5E0 0%, #000851 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 48px; font-weight: 900; text-align: center; margin: 0; direction: ltr;
+        font-size: 2.5rem; font-weight: 900; text-align: center; margin: 0; direction: ltr;
     }
-    .sub-title { text-align: center; color: #666; font-size: 18px; margin-bottom: 30px; direction: ltr;}
-    .stTabs [data-baseweb="tab-list"] { gap: 15px; justify-content: center; }
-    .stTabs [data-baseweb="tab"] { background-color: #f8f9fa; border-radius: 8px; padding: 12px 25px; font-weight: bold;}
+    .sub-title { text-align: center; color: #666; font-size: 1rem; margin-bottom: 20px; direction: ltr;}
+    
+    /* جعل التبويبات تلتف بشكل جميل على الشاشات الصغيرة */
+    .stTabs [data-baseweb="tab-list"] { flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .stTabs [data-baseweb="tab"] { background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: bold;}
     .stTabs [aria-selected="true"] { background-color: #1CB5E0; color: white; }
+    
     input, textarea { text-align: left !important; direction: ltr !important; border-radius: 8px !important;}
-    .stButton>button { border-radius: 8px; font-weight: bold; padding: 10px; }
+    .stButton>button { border-radius: 8px; font-weight: bold; padding: 12px; font-size: 1.1rem;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,7 +230,8 @@ class ProductionEngine:
         if ImageShield.generate(t, "cover.jpg", "cover"):
             self.pdf.add_page()
             self.pdf.image("cover.jpg", x=0, y=0, w=8.5, h=11)
-            os.remove("cover.jpg")
+            if os.path.exists("cover.jpg"):
+                os.remove("cover.jpg")
         else:
             self.pdf.add_page()
             self.pdf.set_font("Arial", "B", 40)
@@ -266,25 +272,15 @@ class ProductionEngine:
             self.log(f"⚠️ تجاوز آمن لخطأ: {e}")
 
         clean_theme = re.sub(r'[^a-zA-Z0-9]', '_', t)[:20]
-        pdf_name = f"Book_{clean_theme}.pdf"
+        pdf_name = f"Book_{clean_theme}_{int(time.time())}.pdf"
         self.pdf.output(pdf_name)
         
         self.log("📝 جاري هندسة الـ SEO وسكريبت الـ TikTok...")
         marketing_prompt = f"Act as a KDP and TikTok Marketing Expert. Create a launch package for a book titled '{t}'.\n1. KDP SEO: Catchy Title, Subtitle, 7 Keywords, Persuasive Description.\n2. VIRAL TIKTOK SCRIPT: A 30-second video script to sell this book organically."
-        marketing_data = SmartGemini.ask(marketing_prompt, f"Title: {t}\nEnjoy the book!")
+        marketing_data = SmartGemini.ask(marketing_prompt, f"Title: {t}\nDescription: Amazing activity book for kids.\n\nTikTok Script:\nHey guys! Check out this awesome {t} book!")
         
-        # إنشاء حزمة رقمية (ZIP Pack)
-        zip_name = f"KDP_AssetPack_{clean_theme}_{int(time.time())}.zip"
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zf:
-            zf.write(pdf_name)
-            zf.writestr("01_Marketing_And_TikTok_Script.txt", marketing_data)
-        
-        with open(zip_name, "wb") as f:
-            f.write(zip_buffer.getvalue())
-            
-        os.remove(pdf_name) 
-        return zip_name, marketing_data
+        # إعادة الملف النصي والنص الخام بدلاً من الـ ZIP فقط
+        return pdf_name, marketing_data
 
     # --- Modes (مصانع المحتوى) ---
     def _coloring_mode(self, count, theme):
@@ -296,7 +292,8 @@ class ProductionEngine:
             if results.get(fname, False):
                 self.pdf.add_page()
                 self.pdf.image(fname, x=1, y=1.5, w=6.5, h=6.5)
-                os.remove(fname)
+                if os.path.exists(fname):
+                    os.remove(fname)
             else:
                 self.pdf.add_page()
                 self.pdf.set_font("Arial", "B", 20)
@@ -318,7 +315,8 @@ class ProductionEngine:
             if results.get(fname, False):
                 self.pdf.add_page()
                 self.pdf.image(fname, x=1, y=2, w=6.5, h=6.5)
-                os.remove(fname)
+                if os.path.exists(fname):
+                    os.remove(fname)
             else: 
                 self.pdf.add_page()
             self.pdf.add_page()
@@ -406,7 +404,8 @@ class ProductionEngine:
             self.pdf.rect(1.25, 2, 6, 7) 
             if results.get(fname, False):
                 self.pdf.image(fname, x=1.5, y=2.5, w=5.5, h=5.5)
-                os.remove(fname)
+                if os.path.exists(fname):
+                    os.remove(fname)
             self.pdf.set_font("Arial", "B", 36)
             self.pdf.set_y(8.2)
             self.pdf.cell(0, 1, word.upper(), align="C")
@@ -438,14 +437,24 @@ def hyper_bot_loop():
             if TELEGRAM_TOKEN and ALL_KEYS[0] != "DUMMY":
                 theme = SmartGemini.ask("Output ONLY 2 words highly profitable KDP micro-niche for kids (e.g. Cyberpunk Cats).", "Ninja Cats").strip()
                 engine = ProductionEngine({'theme': theme, 'pages': 24, 'mode': 'تشكيلة منوعة'}, lambda x: None)
-                f, meta = engine.run()
+                pdf_file, meta = engine.run()
                 
                 try:
-                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", 
-                                  data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ Auto-Factory ZIP Pack: {theme}"}, 
-                                  files={"document": open(f, "rb")}, timeout=30)
+                    # 1. إرسال الكتاب كـ PDF
+                    with open(pdf_file, "rb") as f:
+                        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", 
+                                      data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"📚 كتاب آلي جديد: {theme}"}, 
+                                      files={"document": f}, timeout=30)
+                    
+                    # 2. إرسال النصوص والمعلومات كرسالة منفصلة
+                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
+                                  data={"chat_id": TELEGRAM_CHAT_ID, "text": f"📊 تفاصيل النشر لـ {theme}:\n\n{meta}"}, timeout=20)
                 except Exception: 
                     pass
+                finally:
+                    # تنظيف السيرفر
+                    if os.path.exists(pdf_file):
+                        os.remove(pdf_file)
         except Exception: 
             pass
             
@@ -456,25 +465,23 @@ if not hasattr(st, 'hyper_bot_started'):
     threading.Thread(target=hyper_bot_loop, daemon=True).start()
 
 # ==========================================
-# 8. واجهة الإمبراطورية (The Dashboard)
+# 8. واجهة الإمبراطورية (The Dashboard - Mobile Optimized)
 # ==========================================
 def main():
-    st.markdown('<h1 class="main-title">KDP Digital Empire V30 🏭</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-title">Engineered by Walid Zaki | The Ultimate Asset Factory</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">KDP Digital Empire V31 🏭</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title">Engineered by Walid Zaki | Mobile Optimized Factory</p>', unsafe_allow_html=True)
     
     tabs = st.tabs(["🏭 المصنع السريع", "🧠 عقل الإمبراطورية", "🤖 الأتمتة الشاملة", "⚙️ الإعدادات"])
 
     with tabs[0]:
         st.info("اختر خط الإنتاج المباشر وسيتم تصنيع حزمة النشر الخاصة بك.")
-        c1, c2 = st.columns(2)
-        with c1:
-            u_t = st.text_input("🎯 فكرة النيش (Niche):", "Cyberpunk Dinosaurs")
-            u_p = st.number_input("📄 حجم الكتاب (صفحات):", min_value=10, max_value=150, value=20, step=1)
-        with c2:
-            modes = ["تلوين للأطفال", "قصص مصورة", "ألغاز ونشاطات", "مخططات ودفاتر", "بطاقات تعليمية", "كتب اقتباسات", "كوميكس ومانغا", "تعليم وتتبع", "تشكيلة منوعة"]
-            u_m = st.selectbox("📦 خط الإنتاج الرقمي:", modes)
+        # تم إزالة الأعمدة لتصبح الواجهة عمودية ومتوافقة 100% مع شاشات الهواتف
+        u_t = st.text_input("🎯 فكرة النيش (Niche):", "Cyberpunk Dinosaurs")
+        u_p = st.number_input("📄 حجم الكتاب (صفحات):", min_value=10, max_value=150, value=20, step=1)
+        modes = ["تلوين للأطفال", "قصص مصورة", "ألغاز ونشاطات", "مخططات ودفاتر", "بطاقات تعليمية", "كتب اقتباسات", "كوميكس ومانغا", "تعليم وتتبع", "تشكيلة منوعة"]
+        u_m = st.selectbox("📦 خط الإنتاج الرقمي:", modes)
         
-        if st.button("🚀 تصنيع حزمة الأصول الرقمية", use_container_width=True):
+        if st.button("🚀 تصنيع وحفظ الحزمة الرقمية", use_container_width=True):
             run_prod(u_t, u_p, u_m)
 
     with tabs[1]:
@@ -489,32 +496,49 @@ def main():
                 run_prod(o_t, o_p, plan if plan in modes else "تشكيلة منوعة")
 
     with tabs[2]:
-        st.success("🟢 **حالة الـ Hyper-Bot:** نشط ويعمل في خلفية السيرفر. يقوم بتوليد حزمة نشر جديدة كل 15 دقيقة (كتاب + SEO + سكريبت تيك توك) ويرسلها إليك مباشرة. لا تغلق السيرفر!")
-        st.info("📊 **استراتيجية الإمبراطورية:** أنت الآن تمتلك مصنعاً ينتج (Low Content) و (Mid Content) بلا توقف.")
+        st.success("🟢 **حالة الـ Hyper-Bot:** نشط ويعمل في خلفية السيرفر. يقوم بتوليد حزمة نشر جديدة كل 15 دقيقة (كتاب PDF + رسالة منفصلة لـ SEO وسكريبت تيك توك) ويرسلها إليك مباشرة.")
+        st.info("📊 **استراتيجية الإمبراطورية:** أنت الآن تمتلك مصنعاً ينتج الأصول الرقمية بلا توقف. اترك الموقع يعمل أو استخدم UptimeRobot.")
 
     with tabs[3]:
         st.success("✅ تم تأمين العلامة التجارية (Walid Zaki) في ملفات الـ PDF.")
-        st.success("✅ تقنية التصدير تحولت من (PDF) إلى (ZIP Asset Pack).")
+        st.success("📱 واجهة المستخدم الآن محسنة بالكامل لشاشات الهواتف المحمولة.")
 
 def run_prod(t, p, m):
     stat = st.empty()
     try:
         engine = ProductionEngine({'theme':t, 'pages':p, 'mode':m}, stat.info)
-        zip_file, meta = engine.run()
+        pdf_file, meta = engine.run()
         
+        # إنشاء ملف ZIP للتحميل اليدوي عبر الموقع
+        zip_buffer = io.BytesIO()
+        zip_name = f"KDP_AssetPack_{int(time.time())}.zip"
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            zf.write(pdf_file)
+            zf.writestr("01_Marketing_And_TikTok_Script.txt", meta)
+            
         stat.success("🎉 اكتمل التصنيع! حزمتك الرقمية جاهزة.")
         
         with st.expander("👀 معاينة خطة التسويق وسكريبت TikTok", expanded=True):
             st.code(meta, language="markdown")
             
-        with open(zip_file, "rb") as b: 
-            st.download_button("📦 تحميل حزمة الأصول (ZIP)", b, file_name=zip_file, use_container_width=True)
+        st.download_button("📦 تحميل الحزمة الشاملة (ZIP)", zip_buffer.getvalue(), file_name=zip_name, use_container_width=True)
         
         if TELEGRAM_TOKEN:
             try:
-                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"✅ الحزمة الشاملة لـ {t} جاهزة!"}, files={"document": open(zip_file, "rb")}, timeout=30)
+                # 1. إرسال ملف PDF فقط
+                with open(pdf_file, "rb") as f:
+                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument", 
+                                  data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"📚 كتاب {t} جاهز للرفع!"}, 
+                                  files={"document": f}, timeout=30)
+                # 2. إرسال النصوص كرسالة
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
+                              data={"chat_id": TELEGRAM_CHAT_ID, "text": f"📊 معلومات الـ SEO:\n\n{meta}"}, timeout=20)
             except Exception: 
                 pass
+                
+        # تنظيف الملف من السيرفر بعد الانتهاء
+        if os.path.exists(pdf_file):
+            os.remove(pdf_file)
             
     except Exception as e:
         st.error(f"❌ حدث خطأ: {e}")
